@@ -1,0 +1,42 @@
+---
+title: "data_cleaning"
+author: "Alana Ferris"
+date: "2024-02-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(foreign)
+```
+
+# Research Question 
+Does exposure to phthalate alternatives affect inflammation in children as measured by alpha-1-acid glycoprotein?
+We will investigate this question using NHANES data from 2017-2018 of the serum inflammatory biomarker alpha-1-acid glycoprotein and urinary phthalate alternative metabolite levels, along with other relevant data (urinary creatinine levels and sociodemographic data).
+
+# reading in relevant NHANES 2017-2018 data
+* NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
+* weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
+```{r}
+# phthalates and plasticizers metabolites - urine 
+# codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
+phthte_urine =
+  read.xport("data/PHTHTE_J.XPT")
+
+# urine creatinine levels 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/ALB_CR_J.htm
+creatinine_urine =
+  read.xport("data/ALB_CR_J.XPT")
+
+# Alpha-1-Acid Glycoprotein - Serum
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
+agp_serum =
+  read.xport("data/SSAGP_J.XPT")
+
+# Demographic variables and sample weights 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
+demo =
+  read.xport("data/DEMO_J.XPT")
+```
+
