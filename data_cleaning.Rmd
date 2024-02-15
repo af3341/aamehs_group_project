@@ -22,12 +22,14 @@ We will investigate this question using NHANES data from 2017-2018 of the serum 
 # phthalates and plasticizers metabolites - urine 
 # codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
 phthte_urine =
-  read.xport("data/PHTHTE_J.XPT")
+  read.xport("data/PHTHTE_J.XPT") %>% 
+  janitor::clean_names()
 
 # urine creatinine levels 
 # codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/ALB_CR_J.htm
 creatinine_urine =
-  read.xport("data/ALB_CR_J.XPT")
+  read.xport("data/ALB_CR_J.XPT") %>% 
+  janitor::clean_names()
 
 # Alpha-1-Acid Glycoprotein - Serum
 # codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
@@ -40,3 +42,51 @@ agp_serum =
 demo =
   read.xport("data/DEMO_J.XPT")
 ```
+
+# cleaning variable names of phthalate urine data 
+```{r}
+phthte_urine =
+  phthte_urine %>% 
+  rename(weights = wtsb2yr) %>%
+  rename_with(~ gsub("^urx", "", .), starts_with("urx"))
+  
+# for now, leaving the <LOD comment columns (i.e, columns started wit urd) as they are 
+# 2986 obs
+```
+
+# merging phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
+```{r}
+# dropping albumin from creatinine dataset
+creatinine_urine =
+  creatinine_urine %>% 
+  select(seqn, urxucr, urducrlc) #dropping urxcrs bc i dont want creatinine expressed in those units
+#7936 obs
+
+#merging creatinine data with phthalate data
+phthte_creatinine =
+  merge(creatinine_urine, phthte_urine, by = "seqn") %>%
+  select(!starts_with("urd")) %>% #dropped <LOD columns for ease of pivoting
+  pivot_longer(cols = cnp:mzp,  
+               names_to = "analyte_code",
+               values_to = "reported_result") #pivoted longer so that i can map in the next step
+
+#56734 obs 
+
+#urinary [phth] in ng/mL
+# urinary [creatinine] in mg/dL so need to get this to ng/mL
+
+# Urinary creatinine concentrations, specific gravity, and osmolality are common methods for adjusting dilution. The most widely used method is creatinine adjustment that involves dividing the analyte concentration by the creatinine concentration. Analyte results are then reported as weight of analyte per gram of creatinine (micrograms analyte per gram creatinine).
+
+# making a new column with creatinine-adjusted [phthalate]
+phthte_creatinine =
+  phthte_creatinine %>% 
+  mutate(ng_per_ml_creatinine = urxucr*10000) %>% #here converting mg/dL to ng/mL--> 1mg/dL = 10,000ng/mL
+  mutate(adj_conc = reported_result/ng_per_ml_creatinine)
+
+#visualizing adjusted concentrations but on the log scale bc the numbers are now so small lol 
+boxplot(log10(phthte_creatinine$adj_conc))
+hist(log10(phthte_creatinine$adj_conc))
+```
+
+
+
