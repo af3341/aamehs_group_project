@@ -32,11 +32,11 @@ creatinine_urine =
 # Alpha-1-Acid Glycoprotein - Serum
 # codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
 agp_serum =
-  read.xport("data/SSAGP_J.XPT")
+  read.xport("data/SSAGP_J.XPT") %>% 
+  janitor::clean_names()
 
 # Demographic variables and sample weights 
 # codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
 demo =
   read.xport("data/DEMO_J.XPT")
 ```
-
