@@ -83,7 +83,7 @@ phthte_creatinine =
   mutate(ng_per_ml_creatinine = urxucr*10000) %>% #here converting mg/dL to ng/mL--> 1mg/dL = 10,000ng/mL
   mutate(adj_conc = reported_result/ng_per_ml_creatinine)
 
-#visualizing adjusted concentrations but on the log scale bc the numbers are now so small lol 
+#visualizing adjusted concentrations but on the log scale bc the numbers are now so small lol ... i wonder if im just being dumb or if NHANES really doesnt report specific gravity data 
 boxplot(log10(phthte_creatinine$adj_conc))
 hist(log10(phthte_creatinine$adj_conc))
 ```
