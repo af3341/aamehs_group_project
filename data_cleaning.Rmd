@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(foreign)
+library(dplyr)
 ```
 
 # Research Question 
@@ -40,7 +41,8 @@ agp_serum =
 # Demographic variables and sample weights 
 # codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
 demo =
-  read.xport("data/DEMO_J.XPT")
+  read.xport("data/DEMO_J.XPT") |> 
+  janitor::clean_names()
 ```
 
 # cleaning variable names of phthalate urine data 
@@ -88,5 +90,173 @@ boxplot(log10(phthte_creatinine$adj_conc))
 hist(log10(phthte_creatinine$adj_conc))
 ```
 
+# cleaning variables name of demographic data and drop unneeded variables
+```{r}
+demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
+
+demo <- demo |> 
+  rename(gender = riagendr, 
+         age_yrs_screen = ridageyr, 
+         age_mon_screen = ridagemn, 
+         race_ethn1 = ridreth1,
+         race_ethn3 = ridreth3, 
+         time_period = ridexmon, 
+         age_mon_screen = ridagemn,
+         age_mon_exam = ridexagm, 
+         birth_country = dmdborn4, 
+         citizenship = dmdcitzn,
+         years_us = dmdyrsus, 
+         education = dmdeduc3, 
+         lang_pers_quest = sialang, 
+         proxy_pers_quest = siaproxy, 
+         interpret_pers_quest = siaintrp, 
+         lang_fam_interview = fialang, 
+         proxy_fam_interview = fiaproxy, 
+         interpret_fam_interview = fiaintrp,
+         lang_capi = mialang, 
+         proxy_capi = miaproxy, 
+         interpret_capi = miaintrp, 
+         lang_acasi = aialanga, 
+         hh_size = dmdhhsiz, 
+         fam_size = dmdfmsiz, 
+         hh_young_children = dmdhhsza,
+         hh_children = dmdhhszb, 
+         hh_adults = dmdhhsze, 
+         weight_2yr_intervew = wtint2yr,
+         weight_2yr_mec = wtmec2yr, 
+         variance_psu = sdmvpsu, 
+         variance_stratum = sdmvstra, 
+         income_hh_annual = indhhin2, 
+         income_family_annual = indfmin2, 
+         income_poverty_ratio = indfmpir)
+```
+
+# subset to ages 3-16 
+```{r}
+demo <- demo |> 
+  filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
+```
+
+# create table 1 with age, gender, race/ethnicity, and household income
+```{r}
+
+# recode age into age group 
+demo <- demo |> 
+  mutate(age_group = case_when(age_yrs_screen >= 3 & age_yrs_screen < 7 ~ 1,
+                                          age_yrs_screen >= 7 & age_yrs_screen < 11 ~ 2, 
+                                          age_yrs_screen >= 11 & age_yrs_screen < 14 ~ 3, 
+                                          age_yrs_screen >= 14 ~ 4,
+                                          TRUE ~ NA_real_))
+
+demo |> 
+  pull(income_hh_annual) |> 
+  table()
+
+# recode household income into fewer categories 
+demo <- demo |> 
+  mutate(income_hh_combined = case_when(income_hh_annual == 1 ~ 1,
+                                      income_hh_annual == 2 ~ 1,
+                                      income_hh_annual == 3 ~ 1,
+                                      income_hh_annual == 4 ~ 1,
+                                      income_hh_annual == 5 ~ 2,
+                                      income_hh_annual == 6 ~ 2,
+                                      income_hh_annual == 7 ~ 2,
+                                      income_hh_annual == 8 ~ 3,
+                                      income_hh_annual == 9 ~ 3,
+                                      income_hh_annual == 10 ~ 3,
+                                      income_hh_annual == 12 ~ 4,
+                                      income_hh_annual == 13 ~ 5,
+                                      income_hh_annual == 14 ~ 6,
+                                      income_hh_annual == 15 ~ 7,
+                                      income_hh_annual == 77 ~ NA_real_,
+                                      income_hh_annual == 99 ~ NA_real_))
+
+# Age 
+
+demo |>
+  mutate(age_group = factor(age_group,
+    levels = c(1, 2, 3, 4),
+    labels = c("3-6", "7-10", "11-13", "14-16")
+  )) |>
+  group_by(age_group) |>
+  summarize(count = n()) |>
+  mutate(percentage = round(prop.table(count) * 100, 1)) |>
+  knitr::kable()
+
+# Gender 
+
+demo |>
+  mutate(gender = factor(gender,
+    levels = c(1, 2),
+    labels = c("Male", "Female")
+  )) |>
+  group_by(gender) |>
+  summarize(count = n()) |>
+  mutate(percentage = round(prop.table(count) * 100, 1)) |>
+  knitr::kable()
+
+# Race and ethnicity 
+
+demo |> 
+  mutate(race_ethn3 = factor(race_ethn3,
+    levels = c(1, 2, 3, 4, 5, 6),
+    labels = c("Mexican American", "Other Hispanic", "Non_Hispanic White", "Non_Hispanic Black", "Non-Hispanic Asian", "Other")
+  )) |>
+  group_by(race_ethn3) |>
+  summarize(count = n()) |>
+  mutate(percentage = round(prop.table(count) * 100, 1)) |>
+  knitr::kable()
+
+# Household Income
+
+demo |> 
+  mutate(income_hh_combined = factor(income_hh_combined,
+    levels = c(1, 2, 3, 4, 5, 6, 7),
+    labels = c("$0 to $19,999", "$20,000 to $44,999", "$45,000 to $74,999", "$20,000 and Over", "Under $20,000", "$75,000 to $99,999", "$100,000 and Over")
+  )) |>
+  group_by(income_hh_combined) |>
+  summarize(count = n()) |>
+  mutate(percentage = round(prop.table(count) * 100, 1)) |>
+  knitr::kable()
+
+
+# Combine into summary table with frequency and percentage
+
+table_1 <- demo |> 
+  mutate(
+    age_group = factor(age_group,
+                       levels = c(1, 2, 3, 4),
+                       labels = c("3-6", "7-10", "11-13", "14-16")
+    ),
+    gender = factor(gender,
+                    levels = c(1, 2),
+                    labels = c("Male", "Female")
+    ),
+    race_ethn3 = factor(race_ethn3,
+                        levels = c(1, 2, 3, 4, 5, 6),
+                        labels = c("Mexican American", "Other Hispanic", "Non-Hispanic White", "Non-Hispanic Black", "Non-Hispanic Asian", "Other")
+    ),
+    income_hh_combined = factor(income_hh_combined,
+                                 levels = c(1, 2, 3, 4, 5, 6, 7),
+                                 labels = c("$0 to $19,999", "$20,000 to $44,999", "$45,000 to $74,999", "$20,000 and Over", "Under $20,000", "$75,000 to $99,999", "$100,000 and Over")
+    )
+  ) |>
+  pivot_longer(cols = c(age_group, gender, race_ethn3, income_hh_combined), names_to = "Variable") |>
+  group_by(Variable, value) |>
+  summarize(Frequency = n()) |>
+  mutate(Percentage = round(prop.table(Frequency) * 100, 1)) |> 
+ rename(Category = value) |> 
+   mutate(Variable = case_when(
+    Variable == "age_group" ~ "Age Group",
+    Variable == "gender" ~ "Gender",
+    Variable == "race_ethn3" ~ "Race/Ethnicity",
+    Variable == "income_hh_combined" ~ "Household Income"
+  )) |> 
+  knitr::kable()
+
+table_1
+
+
+```
 
 
