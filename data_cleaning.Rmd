@@ -248,7 +248,7 @@ table_1
 ```{r Zander - Initial Attempt Boxplot Distributions}
 
 #First looking at the logged10 values to see the small concentrations that Alana was mentioning
-#Ordered from lowest to highest concentration distributions, can be toggled by turning off line 255
+#Ordered from lowest to highest concentration distributions, can be toggled by turning off line 256
 #ggplot removes 4256 rows containing non-finite values in these visualizations
 
 log10metabolites_distrib_boxplot = phthte_creatinine |> 
@@ -285,6 +285,7 @@ metabolites_distrib_boxplot
 
 log10metabolites_hisgrid = phthte_creatinine |> 
   mutate(log10_adj_conc = log10(adj_conc)) |> 
+  mutate(analyte_code = fct_reorder(analyte_code, log10_adj_conc)) |> 
   group_by(analyte_code) |> 
   ggplot(aes(x = log10_adj_conc, fill = analyte_code)) + geom_histogram() + theme(
     legend.position = 'right') + 
@@ -294,5 +295,23 @@ log10metabolites_hisgrid = phthte_creatinine |>
     y =  "Count Observations")
 
 log10metabolites_hisgrid 
+```
+
+Attempting to use the 'corrr' package and the adj_concentration values to see if there are co-occurring metabolites, to help see potential underlying confounding biochemical relationships
+Unsure if this needs to be log transformed as well?
+
+```{r}
+#Also was not sure if i should remerge the dataframe or use the preexisting  phthte_creatinine and pivot_wider
+
+#metabolite_corrmatrix = merge(creatinine_urine, phthte_urine, by = "seqn") |> 
+  #select(!starts_with("urd")) |>  #dropped <LOD columns copying method of phthe_creatinine dataframe
+
+metabolite_corrmatrix = phthte_creatinine |> 
+  pivot_wider(
+    names_from = analyte_code,
+    values_from = adj_conc) |> 
+  select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) |> 
+  correlate(use = "pairwise.complete.obs", method = "pearson")
+
 ```
 
