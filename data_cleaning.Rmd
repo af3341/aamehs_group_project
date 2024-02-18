@@ -12,6 +12,9 @@ library(foreign)
 library(dplyr)
 library(forcats)
 library(gtsummary)
+library(corrr)
+library(ggridges)
+library(patchwork)
 ```
 
 # Research Question 
@@ -240,5 +243,56 @@ table_1
 
 ```
 
+## First Attempt at Visualizations of Full Phthalate Metabolite Distributions, adjusted for creatinine
 
-```{r}
+```{r Zander - Initial Attempt Boxplot Distributions}
+
+#First looking at the logged10 values to see the small concentrations that Alana was mentioning
+#Ordered from lowest to highest concentration distributions, can be toggled by turning off line 255
+#ggplot removes 4256 rows containing non-finite values in these visualizations
+
+log10metabolites_distrib_boxplot = phthte_creatinine |> 
+  mutate(log10_adj_conc = log10(adj_conc)) |> 
+  mutate(analyte_code = fct_reorder(analyte_code, log10(adj_conc))) |> 
+  group_by(analyte_code) |> 
+  ggplot(aes(y = log10_adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + 
+  scale_y_continuous(breaks = scales::pretty_breaks(10)) + theme(legend.position = 'none') +
+   labs(
+    title = "Boxplot Distribution of Log10 Transformed Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    x = "Metabolite Coded Name",
+    y = "Log10 Adjusted Concentration (ng/mL)"
+  )
+  
+#Completed Visualization Log10 Concentrations (ng/mL)
+log10metabolites_distrib_boxplot
+
+#The untransformed concentrations are quite small, but difficult to visualize because of an extreme high outliers on the metabolite "MEP", and to a lesser extent ecpt, wanted to provide a second untransformed visualization when removing that outlier
+
+metabolites_distrib_boxplot = phthte_creatinine |> 
+  filter(adj_conc <= 0.05) |> 
+  mutate(analyte_code = fct_reorder(analyte_code, adj_conc)) |> 
+  group_by(analyte_code) |> 
+  ggplot(aes(y = adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + theme(legend.position = 'none') +
+   labs(
+    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    x = "Metabolite Coded Name",
+    y = "Adjusted Concentration (ng/mL)"
+  )
+
+#This visualization is not very usable, but shows the broader distribution of relatively higher concentrations of MEP and ECPT present in urine
+metabolites_distrib_boxplot 
+
+
+log10metabolites_hisgrid = phthte_creatinine |> 
+  mutate(log10_adj_conc = log10(adj_conc)) |> 
+  group_by(analyte_code) |> 
+  ggplot(aes(x = log10_adj_conc, fill = analyte_code)) + geom_histogram() + theme(
+    legend.position = 'right') + 
+  facet_wrap(. ~ analyte_code) +
+  labs(title = "Histogram Distributions of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    x = "Log10 Transformed Adjusted Concentration (ng/mL)",
+    y =  "Count Observations")
+
+log10metabolites_hisgrid 
+```
+
