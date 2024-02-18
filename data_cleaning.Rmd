@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(foreign)
 library(dplyr)
+library(forcats)
+library(gtsummary)
 ```
 
 # Research Question 
@@ -139,7 +141,6 @@ demo <- demo |>
 
 # create table 1 with age, gender, race/ethnicity, and household income
 ```{r}
-
 # recode age into age group 
 demo <- demo |> 
   mutate(age_group = case_when(age_yrs_screen >= 3 & age_yrs_screen < 7 ~ 1,
@@ -147,10 +148,6 @@ demo <- demo |>
                                           age_yrs_screen >= 11 & age_yrs_screen < 14 ~ 3, 
                                           age_yrs_screen >= 14 ~ 4,
                                           TRUE ~ NA_real_))
-
-demo |> 
-  pull(income_hh_annual) |> 
-  table()
 
 # recode household income into fewer categories 
 demo <- demo |> 
@@ -164,99 +161,84 @@ demo <- demo |>
                                       income_hh_annual == 8 ~ 3,
                                       income_hh_annual == 9 ~ 3,
                                       income_hh_annual == 10 ~ 3,
-                                      income_hh_annual == 12 ~ 4,
-                                      income_hh_annual == 13 ~ 5,
-                                      income_hh_annual == 14 ~ 6,
-                                      income_hh_annual == 15 ~ 7,
+                                      income_hh_annual == 12 ~ 5,
+                                      income_hh_annual == 13 ~ 1,
+                                      income_hh_annual == 14 ~ 4,
+                                      income_hh_annual == 15 ~ 4,
                                       income_hh_annual == 77 ~ NA_real_,
                                       income_hh_annual == 99 ~ NA_real_))
 
-# Age 
+#Recode variables of interest as factors with labels 
 
-demo |>
-  mutate(age_group = factor(age_group,
-    levels = c(1, 2, 3, 4),
-    labels = c("3-6", "7-10", "11-13", "14-16")
-  )) |>
-  group_by(age_group) |>
-  summarize(count = n()) |>
-  mutate(percentage = round(prop.table(count) * 100, 1)) |>
-  knitr::kable()
-
-# Gender 
-
-demo |>
-  mutate(gender = factor(gender,
-    levels = c(1, 2),
-    labels = c("Male", "Female")
-  )) |>
-  group_by(gender) |>
-  summarize(count = n()) |>
-  mutate(percentage = round(prop.table(count) * 100, 1)) |>
-  knitr::kable()
-
-# Race and ethnicity 
-
-demo |> 
-  mutate(race_ethn3 = factor(race_ethn3,
-    levels = c(1, 2, 3, 4, 5, 6),
-    labels = c("Mexican American", "Other Hispanic", "Non_Hispanic White", "Non_Hispanic Black", "Non-Hispanic Asian", "Other")
-  )) |>
-  group_by(race_ethn3) |>
-  summarize(count = n()) |>
-  mutate(percentage = round(prop.table(count) * 100, 1)) |>
-  knitr::kable()
-
-# Household Income
-
-demo |> 
-  mutate(income_hh_combined = factor(income_hh_combined,
-    levels = c(1, 2, 3, 4, 5, 6, 7),
-    labels = c("$0 to $19,999", "$20,000 to $44,999", "$45,000 to $74,999", "$20,000 and Over", "Under $20,000", "$75,000 to $99,999", "$100,000 and Over")
-  )) |>
-  group_by(income_hh_combined) |>
-  summarize(count = n()) |>
-  mutate(percentage = round(prop.table(count) * 100, 1)) |>
-  knitr::kable()
-
-
-# Combine into summary table with frequency and percentage
-
-table_1 <- demo |> 
+demo <- demo %>%
   mutate(
-    age_group = factor(age_group,
-                       levels = c(1, 2, 3, 4),
-                       labels = c("3-6", "7-10", "11-13", "14-16")
-    ),
-    gender = factor(gender,
-                    levels = c(1, 2),
-                    labels = c("Male", "Female")
-    ),
-    race_ethn3 = factor(race_ethn3,
-                        levels = c(1, 2, 3, 4, 5, 6),
-                        labels = c("Mexican American", "Other Hispanic", "Non-Hispanic White", "Non-Hispanic Black", "Non-Hispanic Asian", "Other")
-    ),
-    income_hh_combined = factor(income_hh_combined,
-                                 levels = c(1, 2, 3, 4, 5, 6, 7),
-                                 labels = c("$0 to $19,999", "$20,000 to $44,999", "$45,000 to $74,999", "$20,000 and Over", "Under $20,000", "$75,000 to $99,999", "$100,000 and Over")
-    )
-  ) |>
-  pivot_longer(cols = c(age_group, gender, race_ethn3, income_hh_combined), names_to = "Variable") |>
-  group_by(Variable, value) |>
-  summarize(Frequency = n()) |>
-  mutate(Percentage = round(prop.table(Frequency) * 100, 1)) |> 
- rename(Category = value) |> 
-   mutate(Variable = case_when(
-    Variable == "age_group" ~ "Age Group",
-    Variable == "gender" ~ "Gender",
-    Variable == "race_ethn3" ~ "Race/Ethnicity",
-    Variable == "income_hh_combined" ~ "Household Income"
-  )) |> 
-  knitr::kable()
+    age_group = factor(age_group),
+    gender = factor(gender),
+    race_ethn3 = factor(race_ethn3),
+    income_hh_combined = factor(income_hh_combined)
+  )
 
+demo <- demo[!is.na(demo$income_hh_combined), ]
+
+demo <- demo |> 
+  mutate(
+    age_group = fct_recode(age_group,
+                            "3-6" = "1",
+                            "7-10" = "2",
+                            "11-13" = "3",
+                            "14-16" = "4"), 
+    gender = fct_recode(gender,
+                         "Female" = "1", 
+                         "Male" = "2"), 
+    race_ethn3 = fct_recode(race_ethn3,
+                         "Mexican American" = "1", 
+                         "Other Hispanic" = "2",
+                         "Non-Hispanic White" = "3", 
+                         "Non-Hispanic Black" = "4", 
+                         "Non-Hispanic Asian" = "5", 
+                         "Other" = "6", 
+                         "Missing" = "7"), 
+    income_hh_combined = fct_recode(income_hh_combined,
+                                  "$0 to $19,999" = "1", 
+                                  "$20,000 to $44,999" = "2", 
+                                  "$45,000 to $74,999" = "3", 
+                                  "$75,000 and Over" = "4", 
+                                  "$20,000 and Over" = "5"))
+                    
+
+# Create table 1
+
+# Select variables of interest
+variables_of_interest <- c("age_yrs_screen", "age_group", "gender", "race_ethn3", "income_hh_combined")
+
+# Generate summary statistics for all variables
+table_1 <- demo |> 
+  select(all_of(variables_of_interest)) |> 
+  tbl_summary(
+    by = NULL, # No stratification by any variable
+    statistic = list(all_categorical() ~ "{n} ({p}%)",
+                     age_yrs_screen ~ "{median} ({sd})"),
+    digits = list(all_continuous() ~ c(2, 2),
+                  all_categorical() ~ c(0, 1)),
+    type = list(age_yrs_screen ~ "continuous",
+                age_group ~ "categorical",
+                gender ~ "categorical",
+                income_hh_combined ~ "categorical",
+                race_ethn3 ~ "categorical"),
+    label = list(age_yrs_screen ~ "Age",
+                 age_group ~ "Age Group",
+                 gender ~ "Gender",
+                 income_hh_combined ~ "Household Income",
+                 race_ethn3 ~ "Race and Ethnicity")
+  ) |> 
+  modify_header(label = "**Variable**") |> 
+  modify_caption("Table 1: Demographic Characteristics of Children Ages 3-16 in NHANES 2017-2018") |> 
+  bold_labels()
+
+# Print the summary table
 table_1
-
 
 ```
 
 
+```{r}
