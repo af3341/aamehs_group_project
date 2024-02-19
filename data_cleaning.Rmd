@@ -381,8 +381,11 @@ Table with min, med, max, and percent detect for sg-adjusted urinary metabolites
 # Calculate the summary statistics
 metabolite_summary_table <- metabolite_matrix %>% summarise_all(list(
   min = ~min(., na.rm = TRUE),
-    max = ~max(., na.rm = TRUE), 
+  max = ~max(., na.rm = TRUE), 
   median = ~median(., na.rm = TRUE),
+  sd = ~sd(., na.rm = TRUE),
+  #p5 = ~quantile(., probs = 0.05, na.rm = TRUE),
+  p95 = ~quantile(., probs = 0.95, na.rm = TRUE),
   percent_detect = ~sum(. > min(., na.rm = TRUE), na.rm = TRUE) / length(.) * 100
 ))
 
@@ -394,6 +397,29 @@ metabolite_summary_long <- metabolite_summary_table %>%
   pivot_wider(names_from = "statistic", values_from = "value")
 
 knitr::kable(metabolite_summary_long)
+
+```
+
+
+# Removing outliers
+
+```{r removing_outliers}
+
+# Test
+
+dim(metabolite_matrix)
+
+metabolite_filtered <- metabolite_matrix
+
+percentiles_95 <- metabolite_filtered %>%
+  summarise(across(everything(), ~quantile(., probs = 0.95, na.rm = TRUE), .names = "p95_{.col}"))
+
+for(colname in names(metabolite_filtered)) {
+  p95_value <- percentiles_95[[paste0("p95_", colname)]]
+  metabolite_filtered <- metabolite_filtered %>% mutate(!!colname := ifelse(.[[colname]] > p95_value, NA, .[[colname]]))
+}
+
+dim(metabolite_filtered)
 
 ```
 
