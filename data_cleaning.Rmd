@@ -315,3 +315,94 @@ metabolite_corrmatrix = phthte_creatinine |>
 
 ```
 
+```{r corr_mat_try_2}
+
+# metabolites matrix 
+metabolite_matrix = phthte_urine |> 
+  select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
+  na.omit()
+
+metabolite_corr_matrix_2 <- cor(metabolite_matrix)
+
+# visualize correlation matrix
+
+library(corrplot)
+corrplot(metabolite_corr_matrix_2, method = "circle")
+corrplot(metabolite_corr_matrix_2, method = "shade")
+corrplot(metabolite_corr_matrix_2, method = "ellipse")
+corrplot(metabolite_corr_matrix_2, method = "number")
+
+```
+
+```{r}
+
+library(ggplot2)
+library(reshape2)
+cor_matrix_melted <- melt(as.matrix(metabolite_corr_matrix_2))
+ggplot(cor_matrix_melted, aes(Var1, Var2, fill=value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "skyblue", high = "magenta", mid = "pink", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Correlation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_blank()) +
+  coord_fixed()
+
+library(pheatmap)
+pheatmap(metabolite_corr_matrix_2, 
+         clustering_distance_rows = "euclidean",
+         clustering_distance_cols = "euclidean",
+         clustering_method = "complete",
+         color = colorRampPalette(c("blue", "white", "red"))(100),
+         border_color = NA)
+
+
+```
+
+Histogram of AGP distribution.
+
+```{r agp_hist}
+
+# histogram of AGP distribution
+
+hist(agp_serum$ssagp,
+     main = "Histogram of AGP Distribution",
+     xlab = "SS AGP",
+     col = "skyblue")
+
+```
+
+Table with min, med, max, and percent detect for sg-adjusted urinary metabolites.
+
+```{r}
+
+# Let's see how to treat the NAs
+
+metabolite_exploration <- phthte_urine %>% 
+  select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
+  head(n = 100)
+
+metabolite_exploration
+
+# It seems that for subjects with NAs, we just don't have data on the entire subject, so we're just going to exclude them from the dataset.
+
+# Calculate the summary statistics
+metabolite_summary_table <- metabolite_matrix %>% summarise_all(list(
+  min = ~min(., na.rm = TRUE),
+    max = ~max(., na.rm = TRUE), 
+  median = ~median(., na.rm = TRUE)#,
+#  percent_detect = ~sum(. != 0, na.rm = TRUE) / length(.) * 100
+))
+
+metabolite_summary_long <- metabolite_summary_table %>%
+  pivot_longer(cols = everything(),
+               names_to = "metabolite_statistic",
+               values_to = "value") %>%
+  separate(metabolite_statistic, into = c("metabolite", "statistic"), sep = "_", extra = "merge") %>%
+  pivot_wider(names_from = "statistic", values_from = "value")
+
+knitr::kable(metabolite_summary_long)
+
+```
+
