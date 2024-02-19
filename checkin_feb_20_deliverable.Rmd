@@ -1,8 +1,10 @@
 ---
-title: "checkin_feb_20_deliverable"
+title: "Group Project Check-In Deliverable February 20, 2024"
 author: "Allison Stewart, Christine Kuryla, Zander De Jesus, Alana Ferris"
 date: "2024-02-19"
-output: html_document
+output: 
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -18,14 +20,18 @@ library(ggridges)
 library(patchwork)
 ```
 
+# Introduction Section Outline 
+
 # Research Question 
 Does exposure to phthalate alternatives affect inflammation in children as measured by alpha-1-acid glycoprotein?
 We will investigate this question using NHANES data from 2017-2018 of the serum inflammatory biomarker alpha-1-acid glycoprotein and urinary phthalate alternative metabolite levels, along with other relevant data (urinary creatinine levels and sociodemographic data).
 
-# reading in relevant NHANES 2017-2018 data
+# Data Setup
+
+### Reading in Relevant NHANES 2017-2018 Data
 * NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
 * weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
-```{r}
+```{r message=FALSE, warning=FALSE}
 # phthalates and plasticizers metabolites - urine 
 # codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
 phthte_urine =
@@ -51,8 +57,8 @@ demo =
   janitor::clean_names()
 ```
 
-# cleaning variable names of phthalate urine data 
-```{r}
+### Cleaning Variable Names of Phthalate Urine Data 
+```{r message=FALSE, warning=FALSE}
 phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
@@ -62,8 +68,9 @@ phthte_urine =
 # 2986 obs
 ```
 
-# merging phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
-```{r}
+### Adjusting Phthalate Urine Data for Creatinine
+```{r message=FALSE, warning=FALSE}
+# merging Phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
 # dropping albumin from creatinine dataset
 creatinine_urine =
   creatinine_urine %>% 
@@ -97,8 +104,9 @@ hist(log10(phthte_creatinine$adj_conc))
 ###dont log transform here###
 ```
 
-# cleaning variables name of demographic data and drop unneeded variables
-```{r}
+### Cleaning Variables Name of Demographic Data
+```{r message=FALSE, warning=FALSE}
+# drop unneeded variables from dataset 
 demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
 
 demo <- demo |> 
@@ -138,14 +146,17 @@ demo <- demo |>
          income_poverty_ratio = indfmpir)
 ```
 
-# subset to ages 3-16 
-```{r}
+### Subset Demographic Data to Ages 3-16 
+```{r message=FALSE, warning=FALSE}
 demo <- demo |> 
   filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
 ```
 
+# Table 1 
+```{r message=FALSE, warning=FALSE}
+
 # create table 1 with age, gender, race/ethnicity, and household income
-```{r}
+
 # recode age into age group 
 demo <- demo |> 
   mutate(age_group = case_when(age_yrs_screen >= 3 & age_yrs_screen < 7 ~ 1,
@@ -156,22 +167,32 @@ demo <- demo |>
 
 # recode household income into fewer categories 
 demo <- demo |> 
-  mutate(income_hh_combined = case_when(income_hh_annual == 1 ~ 1,
-                                      income_hh_annual == 2 ~ 1,
-                                      income_hh_annual == 3 ~ 1,
-                                      income_hh_annual == 4 ~ 1,
-                                      income_hh_annual == 5 ~ 2,
-                                      income_hh_annual == 6 ~ 2,
-                                      income_hh_annual == 7 ~ 2,
-                                      income_hh_annual == 8 ~ 3,
-                                      income_hh_annual == 9 ~ 3,
-                                      income_hh_annual == 10 ~ 3,
-                                      income_hh_annual == 12 ~ 5,
-                                      income_hh_annual == 13 ~ 1,
-                                      income_hh_annual == 14 ~ 4,
-                                      income_hh_annual == 15 ~ 4,
-                                      income_hh_annual == 77 ~ NA_real_,
-                                      income_hh_annual == 99 ~ NA_real_))
+  mutate(income_hh_combined = case_when(
+                                      income_hh_annual == 1 ~ "1",
+                                      income_hh_annual == 2 ~ "1",
+                                      income_hh_annual == 3 ~ "1",
+                                      income_hh_annual == 4 ~ "1",
+                                      income_hh_annual == 5 ~ "2",
+                                      income_hh_annual == 6 ~ "2",
+                                      income_hh_annual == 7 ~ "2",
+                                      income_hh_annual == 8 ~ "3",
+                                      income_hh_annual == 9 ~ "3",
+                                      income_hh_annual == 10 ~ "3",
+                                      income_hh_annual == 14 ~ "4",
+                                      income_hh_annual == 15 ~ "4",
+                                      income_hh_annual %in% c(77, 99) ~ "Missing",
+                                      TRUE ~ NA_character_ ))
+
+demo$income_hh_combined <- ifelse(is.na(demo$income_hh_combined), "Missing", demo$income_hh_combined)
+         
+demo <- demo |> 
+  mutate(income_hh_binary = case_when(income_hh_annual == 13 ~ "1",
+                                      income_hh_annual == 12 ~ "2",
+                                      income_hh_annual %in% c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14,
+                                                              15, 77, 99) ~ "Missing", TRUE ~ NA))
+
+demo$income_hh_binary <- ifelse(is.na(demo$income_hh_binary), "Missing", demo$income_hh_binary)
+
 
 #Recode variables of interest as factors with labels 
 
@@ -180,10 +201,9 @@ demo <- demo %>%
     age_group = factor(age_group),
     gender = factor(gender),
     race_ethn3 = factor(race_ethn3),
-    income_hh_combined = factor(income_hh_combined)
+    income_hh_combined = factor(income_hh_combined),
+    income_hh_binary = factor(income_hh_binary)
   )
-
-demo <- demo[!is.na(demo$income_hh_combined), ]
 
 demo <- demo |> 
   mutate(
@@ -208,19 +228,25 @@ demo <- demo |>
                                   "$20,000 to $44,999" = "2", 
                                   "$45,000 to $74,999" = "3", 
                                   "$75,000 and Over" = "4", 
-                                  "$20,000 and Over" = "5"))
-                    
+                                  "Missing" = "77", 
+                                  "Missing" = "99"),
+    income_hh_binary = fct_recode(income_hh_binary,
+                                  "Under $20,000" = "1", 
+                                  "$20,000 and Over" = "2", 
+                                  "Missing" = "77", 
+                                  "Missing" = "99"))
 
 # Create table 1
 
 # Select variables of interest
-variables_of_interest <- c("age_yrs_screen", "age_group", "gender", "race_ethn3", "income_hh_combined")
+variables_of_interest <- c("age_yrs_screen", "age_group", "gender", "race_ethn3", "income_hh_combined", "income_hh_binary")
+
 
 # Generate summary statistics for all variables
 table_1 <- demo |> 
   select(all_of(variables_of_interest)) |> 
   tbl_summary(
-    by = NULL, # No stratification by any variable
+    by = NULL, 
     statistic = list(all_categorical() ~ "{n} ({p}%)",
                      age_yrs_screen ~ "{median} ({sd})"),
     digits = list(all_continuous() ~ c(2, 2),
@@ -229,25 +255,34 @@ table_1 <- demo |>
                 age_group ~ "categorical",
                 gender ~ "categorical",
                 income_hh_combined ~ "categorical",
-                race_ethn3 ~ "categorical"),
+                race_ethn3 ~ "categorical",
+                income_hh_binary ~ "categorical"),
     label = list(age_yrs_screen ~ "Age",
                  age_group ~ "Age Group",
                  gender ~ "Gender",
                  income_hh_combined ~ "Household Income",
-                 race_ethn3 ~ "Race and Ethnicity")
-  ) |> 
+                 race_ethn3 ~ "Race and Ethnicity", 
+                 income_hh_binary ~ "Household Income (binary)")
+    ) |> 
   modify_header(label = "**Variable**") |> 
-  modify_caption("Table 1: Demographic Characteristics of Children Ages 3-16 in NHANES 2017-2018") |> 
-  bold_labels()
+  modify_caption("Table 1: Demographic Characteristics of Children Ages 3-16 in NHANES 2017-2018") |>
+  bold_labels() |> 
+  modify_table_body(
+    ~.x %>%
+      mutate(
+        across(where(is.character), ~ifelse(.x == "9.00 (3.94)", "9 (3.94)", .x))
+      )
+  )
 
 # Print the summary table
 table_1
 
 ```
 
-# Summary stats of sg-adjusted urinary metabolites.
+# Reviewing Adjusted Urinary Metabolite Data
 
-```{r}
+### Summary Statistics of of sg-Adjusted Urinary Metabolites
+```{r message=FALSE, warning=FALSE}
 # metabolites matrix 
 metabolite_matrix = phthte_urine |> 
   select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
@@ -275,9 +310,8 @@ knitr::kable(metabolite_summary_long)
 
 ```
 
-# Visualizations of Full Phthalate Metabolite Distributions, adjusted for creatinine
-
-```{r Zander - Initial Attempt Boxplot Distributions}
+### Visualizations of Full Phthalate Metabolite Distributions, Adjusted for Creatinine
+```{r message=FALSE, warning=FALSE}
 
 #First looking at the logged10 values to see the small concentrations that Alana was mentioning
 #Ordered from lowest to highest concentration distributions, can be toggled by turning off line 256
@@ -329,13 +363,15 @@ log10metabolites_hisgrid = phthte_creatinine |>
 log10metabolites_hisgrid 
 ```
 
-#Summary statistics of AGP
-```{r}
+# Reviewing AGP Data 
+
+### Summary Statistics of AGP
+```{r message=FALSE, warning=FALSE}
 
 ```
 
-# Histogram of AGP distribution 
-```{r agp_hist}
+### Histogram of AGP distribution 
+```{r agp_hist, message=FALSE, warning=FALSE}
 
 # histogram of AGP distribution
 
@@ -346,8 +382,9 @@ hist(agp_serum$ssagp,
 
 ```
 
-# Phthalate Metabolite correlatioon matrix
-```{r}
+
+## Phthalate Metabolite Correlation Matrix
+```{r message=FALSE, warning=FALSE}
 
 # metabolites matrix 
 metabolite_matrix = phthte_urine |> 
@@ -366,7 +403,7 @@ corrplot(metabolite_corr_matrix_2, method = "number")
 
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 
 library(ggplot2)
 library(reshape2)
