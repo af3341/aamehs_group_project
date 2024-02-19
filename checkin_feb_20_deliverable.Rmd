@@ -2,7 +2,7 @@
 title: "checkin_feb_20_deliverable"
 author: "Allison Stewart, Christine Kuryla, Zander De Jesus, Alana Ferris"
 date: "2024-02-19"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
