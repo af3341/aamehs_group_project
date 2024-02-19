@@ -1,0 +1,393 @@
+---
+title: "checkin_feb_20_deliverable"
+author: "Allison Stewart, Christine Kuryla, Zander De Jesus, Alana Ferris"
+date: "2024-02-19"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(foreign)
+library(dplyr)
+library(forcats)
+library(gtsummary)
+library(corrr)
+library(ggridges)
+library(patchwork)
+```
+
+# Research Question 
+Does exposure to phthalate alternatives affect inflammation in children as measured by alpha-1-acid glycoprotein?
+We will investigate this question using NHANES data from 2017-2018 of the serum inflammatory biomarker alpha-1-acid glycoprotein and urinary phthalate alternative metabolite levels, along with other relevant data (urinary creatinine levels and sociodemographic data).
+
+# reading in relevant NHANES 2017-2018 data
+* NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
+* weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
+```{r}
+# phthalates and plasticizers metabolites - urine 
+# codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
+phthte_urine =
+  read.xport("data/PHTHTE_J.XPT") %>% 
+  janitor::clean_names()
+
+# urine creatinine levels 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/ALB_CR_J.htm
+creatinine_urine =
+  read.xport("data/ALB_CR_J.XPT") %>% 
+  janitor::clean_names()
+
+# Alpha-1-Acid Glycoprotein - Serum
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
+agp_serum =
+  read.xport("data/SSAGP_J.XPT") %>% 
+  janitor::clean_names()
+
+# Demographic variables and sample weights 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
+demo =
+  read.xport("data/DEMO_J.XPT") |> 
+  janitor::clean_names()
+```
+
+# cleaning variable names of phthalate urine data 
+```{r}
+phthte_urine =
+  phthte_urine %>% 
+  rename(weights = wtsb2yr) %>%
+  rename_with(~ gsub("^urx", "", .), starts_with("urx"))
+  
+# for now, leaving the <LOD comment columns (i.e, columns started wit urd) as they are 
+# 2986 obs
+```
+
+# merging phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
+```{r}
+# dropping albumin from creatinine dataset
+creatinine_urine =
+  creatinine_urine %>% 
+  select(seqn, urxucr, urducrlc) #dropping urxcrs bc i dont want creatinine expressed in those units
+#7936 obs
+
+#merging creatinine data with phthalate data
+phthte_creatinine =
+  merge(creatinine_urine, phthte_urine, by = "seqn") %>%
+  select(!starts_with("urd")) %>% #dropped <LOD columns for ease of pivoting
+  pivot_longer(cols = cnp:mzp,  
+               names_to = "analyte_code",
+               values_to = "reported_result") #pivoted longer so that i can map in the next step
+
+#56734 obs 
+
+#urinary [phth] in ng/mL
+# urinary [creatinine] in mg/dL so need to get this to ng/mL
+
+# Urinary creatinine concentrations, specific gravity, and osmolality are common methods for adjusting dilution. The most widely used method is creatinine adjustment that involves dividing the analyte concentration by the creatinine concentration. Analyte results are then reported as weight of analyte per gram of creatinine (micrograms analyte per gram creatinine).
+
+# making a new column with creatinine-adjusted [phthalate]
+phthte_creatinine =
+  phthte_creatinine %>% 
+  mutate(ng_per_ml_creatinine = urxucr*10000) %>% #here converting mg/dL to ng/mL--> 1mg/dL = 10,000ng/mL
+  mutate(adj_conc = reported_result/ng_per_ml_creatinine)
+
+#visualizing adjusted concentrations but on the log scale bc the numbers are now so small lol ... i wonder if im just being dumb or if NHANES really doesnt report specific gravity data 
+boxplot(log10(phthte_creatinine$adj_conc))
+hist(log10(phthte_creatinine$adj_conc))
+###dont log transform here###
+```
+
+# cleaning variables name of demographic data and drop unneeded variables
+```{r}
+demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
+
+demo <- demo |> 
+  rename(gender = riagendr, 
+         age_yrs_screen = ridageyr, 
+         age_mon_screen = ridagemn, 
+         race_ethn1 = ridreth1,
+         race_ethn3 = ridreth3, 
+         time_period = ridexmon, 
+         age_mon_screen = ridagemn,
+         age_mon_exam = ridexagm, 
+         birth_country = dmdborn4, 
+         citizenship = dmdcitzn,
+         years_us = dmdyrsus, 
+         education = dmdeduc3, 
+         lang_pers_quest = sialang, 
+         proxy_pers_quest = siaproxy, 
+         interpret_pers_quest = siaintrp, 
+         lang_fam_interview = fialang, 
+         proxy_fam_interview = fiaproxy, 
+         interpret_fam_interview = fiaintrp,
+         lang_capi = mialang, 
+         proxy_capi = miaproxy, 
+         interpret_capi = miaintrp, 
+         lang_acasi = aialanga, 
+         hh_size = dmdhhsiz, 
+         fam_size = dmdfmsiz, 
+         hh_young_children = dmdhhsza,
+         hh_children = dmdhhszb, 
+         hh_adults = dmdhhsze, 
+         weight_2yr_intervew = wtint2yr,
+         weight_2yr_mec = wtmec2yr, 
+         variance_psu = sdmvpsu, 
+         variance_stratum = sdmvstra, 
+         income_hh_annual = indhhin2, 
+         income_family_annual = indfmin2, 
+         income_poverty_ratio = indfmpir)
+```
+
+# subset to ages 3-16 
+```{r}
+demo <- demo |> 
+  filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
+```
+
+# create table 1 with age, gender, race/ethnicity, and household income
+```{r}
+# recode age into age group 
+demo <- demo |> 
+  mutate(age_group = case_when(age_yrs_screen >= 3 & age_yrs_screen < 7 ~ 1,
+                                          age_yrs_screen >= 7 & age_yrs_screen < 11 ~ 2, 
+                                          age_yrs_screen >= 11 & age_yrs_screen < 14 ~ 3, 
+                                          age_yrs_screen >= 14 ~ 4,
+                                          TRUE ~ NA_real_))
+
+# recode household income into fewer categories 
+demo <- demo |> 
+  mutate(income_hh_combined = case_when(income_hh_annual == 1 ~ 1,
+                                      income_hh_annual == 2 ~ 1,
+                                      income_hh_annual == 3 ~ 1,
+                                      income_hh_annual == 4 ~ 1,
+                                      income_hh_annual == 5 ~ 2,
+                                      income_hh_annual == 6 ~ 2,
+                                      income_hh_annual == 7 ~ 2,
+                                      income_hh_annual == 8 ~ 3,
+                                      income_hh_annual == 9 ~ 3,
+                                      income_hh_annual == 10 ~ 3,
+                                      income_hh_annual == 12 ~ 5,
+                                      income_hh_annual == 13 ~ 1,
+                                      income_hh_annual == 14 ~ 4,
+                                      income_hh_annual == 15 ~ 4,
+                                      income_hh_annual == 77 ~ NA_real_,
+                                      income_hh_annual == 99 ~ NA_real_))
+
+#Recode variables of interest as factors with labels 
+
+demo <- demo %>%
+  mutate(
+    age_group = factor(age_group),
+    gender = factor(gender),
+    race_ethn3 = factor(race_ethn3),
+    income_hh_combined = factor(income_hh_combined)
+  )
+
+demo <- demo[!is.na(demo$income_hh_combined), ]
+
+demo <- demo |> 
+  mutate(
+    age_group = fct_recode(age_group,
+                            "3-6" = "1",
+                            "7-10" = "2",
+                            "11-13" = "3",
+                            "14-16" = "4"), 
+    gender = fct_recode(gender,
+                         "Female" = "1", 
+                         "Male" = "2"), 
+    race_ethn3 = fct_recode(race_ethn3,
+                         "Mexican American" = "1", 
+                         "Other Hispanic" = "2",
+                         "Non-Hispanic White" = "3", 
+                         "Non-Hispanic Black" = "4", 
+                         "Non-Hispanic Asian" = "5", 
+                         "Other" = "6", 
+                         "Missing" = "7"), 
+    income_hh_combined = fct_recode(income_hh_combined,
+                                  "$0 to $19,999" = "1", 
+                                  "$20,000 to $44,999" = "2", 
+                                  "$45,000 to $74,999" = "3", 
+                                  "$75,000 and Over" = "4", 
+                                  "$20,000 and Over" = "5"))
+                    
+
+# Create table 1
+
+# Select variables of interest
+variables_of_interest <- c("age_yrs_screen", "age_group", "gender", "race_ethn3", "income_hh_combined")
+
+# Generate summary statistics for all variables
+table_1 <- demo |> 
+  select(all_of(variables_of_interest)) |> 
+  tbl_summary(
+    by = NULL, # No stratification by any variable
+    statistic = list(all_categorical() ~ "{n} ({p}%)",
+                     age_yrs_screen ~ "{median} ({sd})"),
+    digits = list(all_continuous() ~ c(2, 2),
+                  all_categorical() ~ c(0, 1)),
+    type = list(age_yrs_screen ~ "continuous",
+                age_group ~ "categorical",
+                gender ~ "categorical",
+                income_hh_combined ~ "categorical",
+                race_ethn3 ~ "categorical"),
+    label = list(age_yrs_screen ~ "Age",
+                 age_group ~ "Age Group",
+                 gender ~ "Gender",
+                 income_hh_combined ~ "Household Income",
+                 race_ethn3 ~ "Race and Ethnicity")
+  ) |> 
+  modify_header(label = "**Variable**") |> 
+  modify_caption("Table 1: Demographic Characteristics of Children Ages 3-16 in NHANES 2017-2018") |> 
+  bold_labels()
+
+# Print the summary table
+table_1
+
+```
+
+# Summary stats of sg-adjusted urinary metabolites.
+
+```{r}
+# metabolites matrix 
+metabolite_matrix = phthte_urine |> 
+  select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
+  na.omit()
+
+# Calculate the summary statistics
+metabolite_summary_table <- metabolite_matrix %>% summarise_all(list(
+  min = ~min(., na.rm = TRUE),
+  max = ~max(., na.rm = TRUE), 
+  median = ~median(., na.rm = TRUE),
+  sd = ~sd(., na.rm = TRUE),
+  #p5 = ~quantile(., probs = 0.05, na.rm = TRUE),
+  p95 = ~quantile(., probs = 0.95, na.rm = TRUE),
+  percent_detect = ~sum(. > min(., na.rm = TRUE), na.rm = TRUE) / length(.) * 100
+))
+
+metabolite_summary_long <- metabolite_summary_table %>%
+  pivot_longer(cols = everything(),
+               names_to = "metabolite_statistic",
+               values_to = "value") %>%
+  separate(metabolite_statistic, into = c("metabolite", "statistic"), sep = "_", extra = "merge") %>%
+  pivot_wider(names_from = "statistic", values_from = "value")
+
+knitr::kable(metabolite_summary_long)
+
+```
+
+# Visualizations of Full Phthalate Metabolite Distributions, adjusted for creatinine
+
+```{r Zander - Initial Attempt Boxplot Distributions}
+
+#First looking at the logged10 values to see the small concentrations that Alana was mentioning
+#Ordered from lowest to highest concentration distributions, can be toggled by turning off line 256
+#ggplot removes 4256 rows containing non-finite values in these visualizations
+
+log10metabolites_distrib_boxplot = phthte_creatinine |> 
+  mutate(log10_adj_conc = log10(adj_conc)) |> 
+  mutate(analyte_code = fct_reorder(analyte_code, log10(adj_conc))) |> 
+  group_by(analyte_code) |> 
+  ggplot(aes(y = log10_adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + 
+  scale_y_continuous(breaks = scales::pretty_breaks(10)) + theme(legend.position = 'none') +
+   labs(
+    title = "Boxplot Distribution of Log10 Transformed Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    x = "Metabolite Coded Name",
+    y = "Log10 Adjusted Concentration (ng/mL)"
+  )
+  
+#Completed Visualization Log10 Concentrations (ng/mL)
+log10metabolites_distrib_boxplot
+
+#The untransformed concentrations are quite small, but difficult to visualize because of an extreme high outliers on the metabolite "MEP", and to a lesser extent ecpt, wanted to provide a second untransformed visualization when removing that outlier
+
+metabolites_distrib_boxplot = phthte_creatinine |> 
+  filter(adj_conc <= 0.05) |> 
+  mutate(analyte_code = fct_reorder(analyte_code, adj_conc)) |> 
+  group_by(analyte_code) |> 
+  ggplot(aes(y = adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + theme(legend.position = 'none') +
+   labs(
+    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    x = "Metabolite Coded Name",
+    y = "Adjusted Concentration (ng/mL)"
+  )
+
+#This visualization is not very usable, but shows the broader distribution of relatively higher concentrations of MEP and ECPT present in urine
+metabolites_distrib_boxplot 
+
+
+log10metabolites_hisgrid = phthte_creatinine |> 
+  mutate(log10_adj_conc = log10(adj_conc)) |> 
+  mutate(analyte_code = fct_reorder(analyte_code, log10_adj_conc)) |> 
+  group_by(analyte_code) |> 
+  ggplot(aes(x = log10_adj_conc, fill = analyte_code)) + geom_histogram() + theme(
+    legend.position = 'right') + 
+  facet_wrap(. ~ analyte_code) +
+  labs(title = "Histogram Distributions of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    x = "Log10 Transformed Adjusted Concentration (ng/mL)",
+    y =  "Count Observations")
+
+log10metabolites_hisgrid 
+```
+
+#Summary statistics of AGP
+```{r}
+
+```
+
+# Histogram of AGP distribution 
+```{r agp_hist}
+
+# histogram of AGP distribution
+
+hist(agp_serum$ssagp,
+     main = "Histogram of AGP Distribution",
+     xlab = "SS AGP",
+     col = "skyblue")
+
+```
+
+# Phthalate Metabolite correlatioon matrix
+```{r}
+
+# metabolites matrix 
+metabolite_matrix = phthte_urine |> 
+  select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
+  na.omit()
+
+metabolite_corr_matrix_2 <- cor(metabolite_matrix)
+
+# visualize correlation matrix
+
+library(corrplot)
+corrplot(metabolite_corr_matrix_2, method = "circle")
+corrplot(metabolite_corr_matrix_2, method = "shade")
+corrplot(metabolite_corr_matrix_2, method = "ellipse")
+corrplot(metabolite_corr_matrix_2, method = "number")
+
+```
+
+```{r}
+
+library(ggplot2)
+library(reshape2)
+cor_matrix_melted <- melt(as.matrix(metabolite_corr_matrix_2))
+ggplot(cor_matrix_melted, aes(Var1, Var2, fill=value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "skyblue", high = "magenta", mid = "pink", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Correlation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_blank()) +
+  coord_fixed()
+
+library(pheatmap)
+pheatmap(metabolite_corr_matrix_2, 
+         clustering_distance_rows = "euclidean",
+         clustering_distance_cols = "euclidean",
+         clustering_method = "complete",
+         color = colorRampPalette(c("blue", "white", "red"))(100),
+         border_color = NA)
+
+
+```
