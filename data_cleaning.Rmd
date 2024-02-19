@@ -1,6 +1,6 @@
 ---
 title: "data_cleaning"
-author: "Alana Ferris"
+author: "Allison Stewart, Christine Kuryla, Zander De Jesus, Alana Ferris"
 date: "2024-02-14"
 output: html_document
 ---
