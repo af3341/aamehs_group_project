@@ -407,19 +407,22 @@ knitr::kable(metabolite_summary_long)
 
 # Test
 
-dim(metabolite_matrix)
+metabolite_unfiltered <- phthte_urine |> 
+  select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp)
 
-metabolite_filtered <- metabolite_matrix
+dim(metabolite_unfiltered)
 
-percentiles_95 <- metabolite_filtered %>%
+metabolite_filtered <- metabolite_unfiltered
+
+percentiles_95 <- metabolite_unfiltered %>%
   summarise(across(everything(), ~quantile(., probs = 0.95, na.rm = TRUE), .names = "p95_{.col}"))
 
-for(colname in names(metabolite_filtered)) {
+for(colname in names(metabolite_unfiltered)) {
   p95_value <- percentiles_95[[paste0("p95_", colname)]]
   metabolite_filtered <- metabolite_filtered %>% mutate(!!colname := ifelse(.[[colname]] > p95_value, NA, .[[colname]]))
 }
 
-dim(metabolite_filtered)
+head(metabolite_filtered)
 
 ```
 
