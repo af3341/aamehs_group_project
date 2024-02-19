@@ -377,22 +377,13 @@ Table with min, med, max, and percent detect for sg-adjusted urinary metabolites
 
 ```{r}
 
-# Let's see how to treat the NAs
-
-metabolite_exploration <- phthte_urine %>% 
-  select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
-  head(n = 100)
-
-metabolite_exploration
-
-# It seems that for subjects with NAs, we just don't have data on the entire subject, so we're just going to exclude them from the dataset.
 
 # Calculate the summary statistics
 metabolite_summary_table <- metabolite_matrix %>% summarise_all(list(
   min = ~min(., na.rm = TRUE),
     max = ~max(., na.rm = TRUE), 
-  median = ~median(., na.rm = TRUE)#,
-#  percent_detect = ~sum(. != 0, na.rm = TRUE) / length(.) * 100
+  median = ~median(., na.rm = TRUE),
+  percent_detect = ~sum(. > min(., na.rm = TRUE), na.rm = TRUE) / length(.) * 100
 ))
 
 metabolite_summary_long <- metabolite_summary_table %>%
