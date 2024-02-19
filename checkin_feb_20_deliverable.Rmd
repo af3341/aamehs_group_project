@@ -16,6 +16,9 @@ library(gtsummary)
 library(corrr)
 library(ggridges)
 library(patchwork)
+library(reshape2)
+library(corrplot)
+library(pheatmap)
 ```
 
 # Research Question 
@@ -245,7 +248,46 @@ table_1
 
 ```
 
-# Summary stats of sg-adjusted urinary metabolites.
+# AGP
+
+## Summary statistics of AGP
+```{r agp_summary}
+
+# AGP
+
+agp_summary_table <- agp_serum %>%
+  select(ssagp) %>% 
+  summarise(
+    min = min(ssagp, na.rm = TRUE),
+    max = max(ssagp, na.rm = TRUE),
+    median = median(ssagp, na.rm = TRUE),
+    mean = mean(ssagp, na.rm = TRUE),
+    sd = sd(ssagp, na.rm = TRUE),
+    p95 = quantile(., probs = 0.95, na.rm = TRUE),
+    count = n(),
+    percent_na = sum(is.na(ssagp)) / n() * 100
+  )
+
+knitr::kable(agp_summary_table)
+
+
+```
+
+## Histogram of AGP distribution 
+```{r agp_hist}
+
+# histogram of AGP distribution
+
+hist(agp_serum$ssagp,
+     main = "Histogram of AGP Distribution",
+     xlab = "SS AGP",
+     col = "skyblue")
+
+```
+
+# Metabolites
+
+## Summary stats of sg-adjusted urinary metabolites.
 
 ```{r}
 # metabolites matrix 
@@ -275,7 +317,7 @@ knitr::kable(metabolite_summary_long)
 
 ```
 
-# Visualizations of Full Phthalate Metabolite Distributions, adjusted for creatinine
+## Visualizations of Full Phthalate Metabolite Distributions, adjusted for creatinine
 
 ```{r Zander - Initial Attempt Boxplot Distributions}
 
@@ -329,24 +371,9 @@ log10metabolites_hisgrid = phthte_creatinine |>
 log10metabolites_hisgrid 
 ```
 
-#Summary statistics of AGP
-```{r}
 
-```
 
-# Histogram of AGP distribution 
-```{r agp_hist}
-
-# histogram of AGP distribution
-
-hist(agp_serum$ssagp,
-     main = "Histogram of AGP Distribution",
-     xlab = "SS AGP",
-     col = "skyblue")
-
-```
-
-# Phthalate Metabolite correlatioon matrix
+## Phthalate Metabolite correlation matrix
 ```{r}
 
 # metabolites matrix 
@@ -354,15 +381,27 @@ metabolite_matrix = phthte_urine |>
   select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
   na.omit()
 
-metabolite_corr_matrix_2 <- cor(metabolite_matrix)
+metabolite_corr_matrix <- cor(metabolite_matrix)
 
 # visualize correlation matrix
 
 library(corrplot)
-corrplot(metabolite_corr_matrix_2, method = "circle")
-corrplot(metabolite_corr_matrix_2, method = "shade")
-corrplot(metabolite_corr_matrix_2, method = "ellipse")
-corrplot(metabolite_corr_matrix_2, method = "number")
+
+corrplot(metabolite_corr_matrix, 
+         method = "number",
+         number.cex = 0.8,
+         number.font = 2,
+         number.digits = 1,
+         tl.col = "black",
+         addCoef.col = 'grey',
+         mar = c(0, 0, 1, 0),
+         main = "Metabolite Correlations")
+
+corrplot(metabolite_corr_matrix, 
+         method = "shade",
+         mar = c(0, 0, 1, 0),
+         tl.col = "black",
+         main = "Metabolite Correlation Matrix")
 
 ```
 
@@ -370,24 +409,25 @@ corrplot(metabolite_corr_matrix_2, method = "number")
 
 library(ggplot2)
 library(reshape2)
-cor_matrix_melted <- melt(as.matrix(metabolite_corr_matrix_2))
+cor_matrix_melted <- melt(as.matrix(metabolite_corr_matrix))
 ggplot(cor_matrix_melted, aes(Var1, Var2, fill=value)) +
   geom_tile(color = "white") +
-  scale_fill_gradient2(low = "skyblue", high = "magenta", mid = "pink", 
+  scale_fill_gradient2(low = "skyblue", mid = "lavender", high = "hotpink", 
                        midpoint = 0, limit = c(-1,1), space = "Lab", 
                        name="Correlation") +
   theme_minimal() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         axis.title = element_blank()) +
+  ggtitle("Metabolite Heatmap") +
   coord_fixed()
 
 library(pheatmap)
-pheatmap(metabolite_corr_matrix_2, 
+pheatmap(metabolite_corr_matrix, 
          clustering_distance_rows = "euclidean",
          clustering_distance_cols = "euclidean",
          clustering_method = "complete",
-         color = colorRampPalette(c("blue", "white", "red"))(100),
-         border_color = NA)
+         color = colorRampPalette(c("palegreen", "turquoise", "cornflowerblue"))(100),
+         main = "Metabolite Correlation Heirarchical Clustering")
 
 
 ```
