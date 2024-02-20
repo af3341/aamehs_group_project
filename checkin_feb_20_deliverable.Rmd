@@ -483,7 +483,7 @@ pheatmap(metabolite_corr_matrix,
   - AGP Biomarker https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
   - Cohort Demographic Variables https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
 - Jurewicz, J., & Hanke, W. (2011). Exposure to phthalates: reproductive outcome and children health. A review of epidemiological studies. *International journal of occupational medicine and environmental health, 24*, 115-141.
+- Kim, Y. M., Kim, J., Cheong, H. K., Jeon, B. H., & Ahn, K. (2018). Exposure to phthalates aggravates pulmonary function and airway inflammation in asthmatic children. *PLoS One, 13(12)*, e0208553.
 - Lottrup, G., Andersson, A. M., Leffers, H., Mortensen, G. K., Toppari, J., Skakkebaek, N. E., & Main, K. M. (2006). Possible impact of phthalates on infant reproductive health. *International journal of andrology, 29(1)*, 172-180.
 - Pahwa R, Goyal A, Jialal I. Chronic Inflammation. [Updated 2023 Aug 7]. In: StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing; 2024 Jan-. Available from: https://www.ncbi.nlm.nih.gov/books/NBK493173/#
 - Wolff, M. S., Pajak, A., Pinney, S. M., Windham, G. C., Galvez, M., Rybak, M., ... & Teitelbaum, S. L. (2017). Associations of urinary phthalate and phenol biomarkers with menarche in a multiethnic cohort of young girls. *Reproductive Toxicology, 67*, 56-64.
-- Kim, Y. M., Kim, J., Cheong, H. K., Jeon, B. H., & Ahn, K. (2018). Exposure to phthalates aggravates pulmonary function and airway inflammation in asthmatic children. *PLoS One, 13(12)*, e0208553.
