@@ -27,16 +27,16 @@ library(pheatmap)
 
 ### Background Information:
 
-- Phthalates consist of a family of synthetic chemicals used as plasticizers and surface resin for packaging and other adhesive applications. Public Health literature has found that exposure to this family of chemicals has led to endocrine disrupting and reproductive effects, with pregnant women and children being most vulnerable to phthalate concentrations (Jurewicz & Hanke 2011). From 2018 to 2022 the FDA has ammended its food additive regulations to limit most phtlates from food contact applications and packaging materials.
+- Phthalates consist of a family of synthetic chemicals used as plasticizers and surface resin for packaging and other adhesive applications. Public Health literature has found that exposure to this family of chemicals has led to endocrine disrupting and reproductive effects, with pregnant women and children being most vulnerable to phthalate concentrations (Jurewicz & Hanke 2011). From 2018 to 2022 the FDA has ammended its food additive regulations to limit most phthalates from food contact applications and packaging materials.
 
 - What are the health effects we know so far? 
   - In infant boys there has been evidence of phthalate exposure being associated with decreased anogenital distance and decreased testicular developement (Lottrup et al. 2006). 
   - Phthalate exposure has been associated with earlier ages of menarche in multi-ethnic cohorts of young girls (Wolff et al. 2017).
   - Exposure to phthalates has been associated with aggravating pulmonary function and airway inflammation in sensative asthmatic children (Kim et al. 2018)
-- Phthalates have been detected in children in the past, but there is less published  on the monitored impact of phthalate metabolites in this study population. 
+- As noted above, many well-known phthalates have been detected in children in the past (i.e., DEHP) and are associated with different health effects. However, the use of phthalate *alternatives* may be on the rise, with little known regarding the potential human health effects from exposure to these chemicals. 
 
-- One study that measures a comprehensive survey of phthlate metabolites is the CDC's **National Health and Nutrition Examination Survey (NHANES)**, which contains measurements of phthalate concentrations in urine starting at age 3 in its 2017-2018 cohort released dataset.
-- This national cohort study also measures serum levels of alpha-1-acid glycoprotein, a biomarker for inflammation, and chronic elevated inflammation can increase the risk of cardiovascular diseases. 
+- The CDC's **National Health and Nutrition Examination Survey (NHANES)** measured levels of phthalate and phthalate alternative metabolite concentrations in urine starting at age 3 in its 2017-2018 cohort using high performance liquid chromatography-electrospray ionization-tandem mass spectrometry (HPLC-ESI-MS/MS).
+- This national cohort study also measured serum levels of alpha-1-acid glycoprotein (AGP) via the Tina-quant Roche AAGP2 assay. AGP is a biomarker of inflammation, and its concentration can increase 3-fold within 24-48 hours when inflammation occurs. Because of the almost ubiquitous exposure to plasticizers and the short half-lives of phthalates and phthalate alternatives, this sensitive acute phase reactant is an optimal biomarker to assess the effect of phthalates and phthalate alternatives on systemic inflammation. Chronic elevated inflammation can increase the risk of many diseases like CVD, diabetes, auto-immune disease, cancer, and IBD (Pahwa et al., 2023). 
 
 ### Significance of Research Goals
 - This research project would seek to add to the existing literature on phthalate exposure by focusing on the alternative metabolites that it rapidly breaks down into after human ingestion.
@@ -392,6 +392,7 @@ metabolites_hisgrid
 ### Summary Statistics of AGP
 ```{r message=FALSE, warning=FALSE}
 # AGP
+## NHANES reported that no results were below the lower limit of detection.
 agp_summary_table <- agp_serum %>%
   select(ssagp) %>% 
   summarise(
@@ -483,5 +484,6 @@ pheatmap(metabolite_corr_matrix,
   - Cohort Demographic Variables https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
 - Jurewicz, J., & Hanke, W. (2011). Exposure to phthalates: reproductive outcome and children health. A review of epidemiological studies. *International journal of occupational medicine and environmental health, 24*, 115-141.
 - Lottrup, G., Andersson, A. M., Leffers, H., Mortensen, G. K., Toppari, J., Skakkebaek, N. E., & Main, K. M. (2006). Possible impact of phthalates on infant reproductive health. *International journal of andrology, 29(1)*, 172-180.
+- Pahwa R, Goyal A, Jialal I. Chronic Inflammation. [Updated 2023 Aug 7]. In: StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing; 2024 Jan-. Available from: https://www.ncbi.nlm.nih.gov/books/NBK493173/#
 - Wolff, M. S., Pajak, A., Pinney, S. M., Windham, G. C., Galvez, M., Rybak, M., ... & Teitelbaum, S. L. (2017). Associations of urinary phthalate and phenol biomarkers with menarche in a multiethnic cohort of young girls. *Reproductive Toxicology, 67*, 56-64.
 - Kim, Y. M., Kim, J., Cheong, H. K., Jeon, B. H., & Ahn, K. (2018). Exposure to phthalates aggravates pulmonary function and airway inflammation in asthmatic children. *PLoS One, 13(12)*, e0208553.
