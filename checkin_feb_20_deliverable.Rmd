@@ -457,7 +457,7 @@ hist(agp_serum$ssagp,
 ```
 
 
-## Phthalate Metabolite Correlation Matrix
+# Phthalate Metabolite Correlation Matrix
 ```{r message=FALSE, warning=FALSE}
 
 # metabolites matrix is adjusted, see above
