@@ -128,7 +128,7 @@ boxplot(phthte_creatinine$adj_conc, ylim = c(0, 0.08))
 hist(phthte_creatinine$adj_conc, ylim = c(0, 0.02))
 ```
 
-### Cleaning Variables Name of Demographic Data
+### Cleaning Variable Names of Demographic Data
 ```{r message=FALSE, warning=FALSE}
 # drop unneeded variables from dataset 
 demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
@@ -170,7 +170,7 @@ demo <- demo |>
          income_poverty_ratio = indfmpir)
 ```
 
-### Subset Demographic Data to Ages 3-16 
+### Subsetting Demographic Data to Ages 3-16 
 ```{r message=FALSE, warning=FALSE}
 demo <- demo |> 
   filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
@@ -305,7 +305,7 @@ table_1
 
 # Reviewing Adjusted Urinary Metabolite Data
 
-### Summary Statistics of of Creatine-Adjusted Urinary Metabolites
+### Summary Statistics of Creatinine-Adjusted Urinary Metabolites
 ```{r message=FALSE, warning=FALSE}
 # metabolites matrix 
 metabolite_matrix = phthte_urine |> 
@@ -348,7 +348,7 @@ metabolites_distrib_boxplot = phthte_creatinine |>
   ggplot(aes(y = adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + 
   scale_y_continuous(breaks = scales::pretty_breaks(10)) + theme(legend.position = 'none') +
    labs(
-    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, \nAdjusted by Creatinine",
     x = "Metabolite Coded Name",
     y = "Adjusted Concentration (ng/mL)"
   )
@@ -364,7 +364,7 @@ metabolites_distrib_boxplot = phthte_creatinine |>
   group_by(analyte_code) |> 
   ggplot(aes(y = adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + theme(legend.position = 'none') +
    labs(
-    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, \nAdjusted by Creatinine",
     x = "Metabolite Coded Name",
     y = "Adjusted Concentration (ng/mL)"
   )
@@ -380,7 +380,7 @@ metabolites_hisgrid = phthte_creatinine |>
   ggplot(aes(x = adj_conc, fill = analyte_code)) + geom_histogram() + theme(
     legend.position = 'right') + 
   facet_wrap(. ~ analyte_code) +
-  labs(title = "Histogram Distributions of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+  labs(title = "Histogram Distributions of Phthalate Metabolites found in Urine, \nAdjusted by Creatinine",
     x = "Adjusted Concentration (ng/mL)",
     y =  "Count Observations")
 
