@@ -39,9 +39,9 @@ library(pheatmap)
 - This national cohort study also measured serum levels of alpha-1-acid glycoprotein (AGP) via the Tina-quant Roche AAGP2 assay. AGP is a biomarker of inflammation, and its concentration can increase 3-fold within 24-48 hours when inflammation occurs. Because of the almost ubiquitous exposure to plasticizers and the short half-lives of phthalates and phthalate alternatives, this sensitive acute phase reactant is an optimal biomarker to assess the effect of phthalates and phthalate alternatives on systemic inflammation. Chronic elevated inflammation can increase the risk of many diseases like CVD, diabetes, auto-immune disease, cancer, and IBD (Pahwa et al., 2023). 
 
 ### Significance of Research Goals
-- This research project would seek to add to the existing literature on phthalate exposure by focusing on the alternative metabolites that it rapidly breaks down into after human ingestion.
-- We will seek to look at mixture effects of different phthalate metabolites, and if any chemicals appear to co-occur or interact together. 
-- Leverage a nationally representative survey through the NHANES 2017-2018 Cohort Data, to evaluate potential vulnerabilities in one of the most vulnerable populations (infants and developing children).
+- This research project would seek to add to the existing literature on phthalate exposure by focusing on the newer plasticizers, measured via urinary phthalate and phthalate alternative metabolites.
+- We will also add to the literature by examining the mixture effects of different phthalate and phthalate alternative metabolites on levels of inflammation. 
+- Leveraging a nationally representative survey through the NHANES 2017-2018 Cohort Data will allow us to evaluate exposures to these chemicals in one of the most vulnerable populations: infants and developing children, as well as assess if adult racial disparities in phthalate exposure persist among children.
 
 ### Research Question 
 Does exposure to phthalate alternatives affect inflammation in children as measured by alpha-1-acid glycoprotein?
