@@ -308,9 +308,18 @@ table_1
 ### Summary Statistics of Creatinine-Adjusted Urinary Metabolites
 ```{r message=FALSE, warning=FALSE}
 # metabolites matrix 
-metabolite_matrix = phthte_urine |> 
+metabolite_matrix <- phthte_urine %>% 
   select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
   na.omit()
+
+# adjusted metabolite matrix
+metabolites_adj <- phthte_creatinine %>%
+  pivot_wider(id_cols = seqn,
+              names_from = analyte_code,
+              values_from = adj_conc) %>% 
+  select(-seqn)
+
+###### First do summary statistics for non-adjusted to see percent detected
 
 # Calculate the summary statistics
 metabolite_summary_table <- metabolite_matrix %>% summarise_all(list(
@@ -330,7 +339,34 @@ metabolite_summary_long <- metabolite_summary_table %>%
   separate(metabolite_statistic, into = c("metabolite", "statistic"), sep = "_", extra = "merge") %>%
   pivot_wider(names_from = "statistic", values_from = "value")
 
-knitr::kable(metabolite_summary_long)
+knitr::kable(metabolite_summary_long,
+             caption = "Non-adjusted Metabolites")
+
+
+########### Same but for adjusted values 
+
+metabolite_matrix <- metabolites_adj
+
+# Calculate the summary statistics
+metabolite_summary_table <- metabolites_adj %>% summarise_all(list(
+  min = ~min(., na.rm = TRUE),
+  max = ~max(., na.rm = TRUE), 
+  median = ~median(., na.rm = TRUE),
+  sd = ~sd(., na.rm = TRUE),
+  #p5 = ~quantile(., probs = 0.05, na.rm = TRUE),
+  p95 = ~quantile(., probs = 0.95, na.rm = TRUE),
+  percent_detect = ~sum(. > min(., na.rm = TRUE), na.rm = TRUE) / length(.) * 100
+))
+
+metabolite_summary_long <- metabolite_summary_table %>%
+  pivot_longer(cols = everything(),
+               names_to = "metabolite_statistic",
+               values_to = "value") %>%
+  separate(metabolite_statistic, into = c("metabolite", "statistic"), sep = "_", extra = "merge") %>%
+  pivot_wider(names_from = "statistic", values_from = "value")
+
+knitr::kable(metabolite_summary_long,
+             caption = "Adjusted Metabolites")
 
 ```
 
@@ -424,12 +460,11 @@ hist(agp_serum$ssagp,
 ## Phthalate Metabolite Correlation Matrix
 ```{r message=FALSE, warning=FALSE}
 
-# metabolites matrix 
-metabolite_matrix = phthte_urine |> 
-  select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
-  na.omit()
+# metabolites matrix is adjusted, see above
 
-metabolite_corr_matrix <- cor(metabolite_matrix)
+metabolites_adj <- metabolites_adj %>% 
+  na.omit()
+metabolite_corr_matrix <- cor(metabolites_adj)
 
 # visualize correlation matrix
 
