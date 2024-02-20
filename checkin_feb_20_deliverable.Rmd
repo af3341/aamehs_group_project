@@ -1,8 +1,10 @@
 ---
-title: "checkin_feb_20_deliverable"
+title: "Group Project Check-In Deliverable February 20, 2024"
 author: "Allison Stewart, Christine Kuryla, Zander De Jesus, Alana Ferris"
 date: "2024-02-19"
-output: html_document
+output: 
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -21,14 +23,40 @@ library(corrplot)
 library(pheatmap)
 ```
 
-# Research Question 
+# Introduction Section Outline 
+
+### Background Information:
+
+- Phthalates consist of a family of synthetic chemicals used as plasticizers and surface resin for packaging and other adhesive applications. Public Health literature has found that exposure to this family of chemicals has led to endocrine disrupting and reproductive effects, with pregnant women and children being most vulnerable to phthalate concentrations (Jurewicz & Hanke 2011). From 2018 to 2022 the FDA has ammended its food additive regulations to limit most phthalates from food contact applications and packaging materials.
+
+- What are the health effects we know so far? 
+  - In infant boys there has been evidence of phthalate exposure being associated with decreased anogenital distance and decreased testicular developement (Lottrup et al. 2006). 
+  - Phthalate exposure has been associated with earlier ages of menarche in multi-ethnic cohorts of young girls (Wolff et al. 2017).
+  - Exposure to phthalates has been associated with aggravating pulmonary function and airway inflammation in sensative asthmatic children (Kim et al. 2018)
+- As noted above, many well-known phthalates have been detected in children in the past (i.e., DEHP) and are associated with different health effects. However, the use of phthalate *alternatives* may be on the rise, with little known regarding the potential human health effects from exposure to these chemicals. 
+
+- The CDC's **National Health and Nutrition Examination Survey (NHANES)** measured levels of phthalate and phthalate alternative metabolite concentrations in urine starting at age 3 in its 2017-2018 cohort using high performance liquid chromatography-electrospray ionization-tandem mass spectrometry (HPLC-ESI-MS/MS).
+- This national cohort study also measured serum levels of alpha-1-acid glycoprotein (AGP) via the Tina-quant Roche AAGP2 assay. AGP is a biomarker of inflammation, and its concentration can increase 3-fold within 24-48 hours when inflammation occurs. Because of the almost ubiquitous exposure to plasticizers and the short half-lives of phthalates and phthalate alternatives, this sensitive acute phase reactant is an optimal biomarker to assess the effect of phthalates and phthalate alternatives on systemic inflammation. Chronic elevated inflammation can increase the risk of many diseases like CVD, diabetes, auto-immune disease, cancer, and IBD (Pahwa et al., 2023). 
+
+### Significance of Research Goals
+- This research project would seek to add to the existing literature on phthalate exposure by focusing on the newer plasticizers, measured via urinary phthalate and phthalate alternative metabolites.
+- We will also add to the literature by examining the mixture effects of different phthalate and phthalate alternative metabolites on levels of inflammation. 
+- Leveraging a nationally representative survey through the NHANES 2017-2018 Cohort Data will allow us to evaluate exposures to these chemicals in one of the most vulnerable populations: infants and developing children, as well as assess if adult racial disparities in phthalate exposure persist among children.
+
+### Research Question 
 Does exposure to phthalate alternatives affect inflammation in children as measured by alpha-1-acid glycoprotein?
+
 We will investigate this question using NHANES data from 2017-2018 of the serum inflammatory biomarker alpha-1-acid glycoprotein and urinary phthalate alternative metabolite levels, along with other relevant data (urinary creatinine levels and sociodemographic data).
 
-# reading in relevant NHANES 2017-2018 data
+### Hypothesis
+We hypothesize that there is a significant positive association between increasing phthalate metabolite concentrations and increased concentrations of serum inflammatory biomarker alpha-1-acid glycoprotein (AGP). 
+
+# Data Setup
+
+### Reading in Relevant NHANES 2017-2018 Data
 * NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
 * weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
-```{r}
+```{r message=FALSE, warning=FALSE}
 # phthalates and plasticizers metabolites - urine 
 # codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
 phthte_urine =
@@ -54,8 +82,8 @@ demo =
   janitor::clean_names()
 ```
 
-# cleaning variable names of phthalate urine data 
-```{r}
+### Cleaning Variable Names of Phthalate Urine Data 
+```{r message=FALSE, warning=FALSE}
 phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
@@ -65,8 +93,9 @@ phthte_urine =
 # 2986 obs
 ```
 
-# merging phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
-```{r}
+### Adjusting Phthalate Urine Data for Creatinine
+```{r message=FALSE, warning=FALSE}
+# merging Phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
 # dropping albumin from creatinine dataset
 creatinine_urine =
   creatinine_urine %>% 
@@ -95,13 +124,13 @@ phthte_creatinine =
   mutate(adj_conc = reported_result/ng_per_ml_creatinine)
 
 #visualizing adjusted concentrations but on the log scale bc the numbers are now so small lol ... i wonder if im just being dumb or if NHANES really doesnt report specific gravity data 
-boxplot(log10(phthte_creatinine$adj_conc))
-hist(log10(phthte_creatinine$adj_conc))
-###dont log transform here###
+boxplot(phthte_creatinine$adj_conc, ylim = c(0, 0.08))
+hist(phthte_creatinine$adj_conc, ylim = c(0, 0.02))
 ```
 
-# cleaning variables name of demographic data and drop unneeded variables
-```{r}
+### Cleaning Variable Names of Demographic Data
+```{r message=FALSE, warning=FALSE}
+# drop unneeded variables from dataset 
 demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
 
 demo <- demo |> 
@@ -141,14 +170,17 @@ demo <- demo |>
          income_poverty_ratio = indfmpir)
 ```
 
-# subset to ages 3-16 
-```{r}
+### Subsetting Demographic Data to Ages 3-16 
+```{r message=FALSE, warning=FALSE}
 demo <- demo |> 
   filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
 ```
 
+# Table 1 
+```{r message=FALSE, warning=FALSE}
+
 # create table 1 with age, gender, race/ethnicity, and household income
-```{r}
+
 # recode age into age group 
 demo <- demo |> 
   mutate(age_group = case_when(age_yrs_screen >= 3 & age_yrs_screen < 7 ~ 1,
@@ -159,22 +191,32 @@ demo <- demo |>
 
 # recode household income into fewer categories 
 demo <- demo |> 
-  mutate(income_hh_combined = case_when(income_hh_annual == 1 ~ 1,
-                                      income_hh_annual == 2 ~ 1,
-                                      income_hh_annual == 3 ~ 1,
-                                      income_hh_annual == 4 ~ 1,
-                                      income_hh_annual == 5 ~ 2,
-                                      income_hh_annual == 6 ~ 2,
-                                      income_hh_annual == 7 ~ 2,
-                                      income_hh_annual == 8 ~ 3,
-                                      income_hh_annual == 9 ~ 3,
-                                      income_hh_annual == 10 ~ 3,
-                                      income_hh_annual == 12 ~ 5,
-                                      income_hh_annual == 13 ~ 1,
-                                      income_hh_annual == 14 ~ 4,
-                                      income_hh_annual == 15 ~ 4,
-                                      income_hh_annual == 77 ~ NA_real_,
-                                      income_hh_annual == 99 ~ NA_real_))
+  mutate(income_hh_combined = case_when(
+                                      income_hh_annual == 1 ~ "1",
+                                      income_hh_annual == 2 ~ "1",
+                                      income_hh_annual == 3 ~ "1",
+                                      income_hh_annual == 4 ~ "1",
+                                      income_hh_annual == 5 ~ "2",
+                                      income_hh_annual == 6 ~ "2",
+                                      income_hh_annual == 7 ~ "2",
+                                      income_hh_annual == 8 ~ "3",
+                                      income_hh_annual == 9 ~ "3",
+                                      income_hh_annual == 10 ~ "3",
+                                      income_hh_annual == 14 ~ "4",
+                                      income_hh_annual == 15 ~ "4",
+                                      income_hh_annual %in% c(77, 99) ~ "Missing",
+                                      TRUE ~ NA_character_ ))
+
+demo$income_hh_combined <- ifelse(is.na(demo$income_hh_combined), "Missing", demo$income_hh_combined)
+         
+demo <- demo |> 
+  mutate(income_hh_binary = case_when(income_hh_annual == 13 ~ "1",
+                                      income_hh_annual == 12 ~ "2",
+                                      income_hh_annual %in% c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14,
+                                                              15, 77, 99) ~ "Missing", TRUE ~ NA))
+
+demo$income_hh_binary <- ifelse(is.na(demo$income_hh_binary), "Missing", demo$income_hh_binary)
+
 
 #Recode variables of interest as factors with labels 
 
@@ -183,10 +225,9 @@ demo <- demo %>%
     age_group = factor(age_group),
     gender = factor(gender),
     race_ethn3 = factor(race_ethn3),
-    income_hh_combined = factor(income_hh_combined)
+    income_hh_combined = factor(income_hh_combined),
+    income_hh_binary = factor(income_hh_binary)
   )
-
-demo <- demo[!is.na(demo$income_hh_combined), ]
 
 demo <- demo |> 
   mutate(
@@ -211,19 +252,25 @@ demo <- demo |>
                                   "$20,000 to $44,999" = "2", 
                                   "$45,000 to $74,999" = "3", 
                                   "$75,000 and Over" = "4", 
-                                  "$20,000 and Over" = "5"))
-                    
+                                  "Missing" = "77", 
+                                  "Missing" = "99"),
+    income_hh_binary = fct_recode(income_hh_binary,
+                                  "Under $20,000" = "1", 
+                                  "$20,000 and Over" = "2", 
+                                  "Missing" = "77", 
+                                  "Missing" = "99"))
 
 # Create table 1
 
 # Select variables of interest
-variables_of_interest <- c("age_yrs_screen", "age_group", "gender", "race_ethn3", "income_hh_combined")
+variables_of_interest <- c("age_yrs_screen", "age_group", "gender", "race_ethn3", "income_hh_combined", "income_hh_binary")
+
 
 # Generate summary statistics for all variables
 table_1 <- demo |> 
   select(all_of(variables_of_interest)) |> 
   tbl_summary(
-    by = NULL, # No stratification by any variable
+    by = NULL, 
     statistic = list(all_categorical() ~ "{n} ({p}%)",
                      age_yrs_screen ~ "{median} ({sd})"),
     digits = list(all_continuous() ~ c(2, 2),
@@ -232,64 +279,34 @@ table_1 <- demo |>
                 age_group ~ "categorical",
                 gender ~ "categorical",
                 income_hh_combined ~ "categorical",
-                race_ethn3 ~ "categorical"),
+                race_ethn3 ~ "categorical",
+                income_hh_binary ~ "categorical"),
     label = list(age_yrs_screen ~ "Age",
                  age_group ~ "Age Group",
                  gender ~ "Gender",
                  income_hh_combined ~ "Household Income",
-                 race_ethn3 ~ "Race and Ethnicity")
-  ) |> 
+                 race_ethn3 ~ "Race and Ethnicity", 
+                 income_hh_binary ~ "Household Income (binary)")
+    ) |> 
   modify_header(label = "**Variable**") |> 
-  modify_caption("Table 1: Demographic Characteristics of Children Ages 3-16 in NHANES 2017-2018") |> 
-  bold_labels()
+  modify_caption("Table 1: Demographic Characteristics of Children Ages 3-16 in NHANES 2017-2018") |>
+  bold_labels() |> 
+  modify_table_body(
+    ~.x %>%
+      mutate(
+        across(where(is.character), ~ifelse(.x == "9.00 (3.94)", "9 (3.94)", .x))
+      )
+  )
 
 # Print the summary table
 table_1
 
 ```
 
-# AGP
+# Reviewing Adjusted Urinary Metabolite Data
 
-## Summary statistics of AGP
-```{r agp_summary}
-
-# AGP
-
-agp_summary_table <- agp_serum %>%
-  select(ssagp) %>% 
-  summarise(
-    min = min(ssagp, na.rm = TRUE),
-    max = max(ssagp, na.rm = TRUE),
-    median = median(ssagp, na.rm = TRUE),
-    mean = mean(ssagp, na.rm = TRUE),
-    sd = sd(ssagp, na.rm = TRUE),
-    p95 = quantile(., probs = 0.95, na.rm = TRUE),
-    count = n(),
-    percent_na = sum(is.na(ssagp)) / n() * 100
-  )
-
-knitr::kable(agp_summary_table)
-
-
-```
-
-## Histogram of AGP distribution 
-```{r agp_hist}
-
-# histogram of AGP distribution
-
-hist(agp_serum$ssagp,
-     main = "Histogram of AGP Distribution",
-     xlab = "SS AGP",
-     col = "skyblue")
-
-```
-
-# Metabolites
-
-## Summary stats of sg-adjusted urinary metabolites.
-
-```{r}
+### Summary Statistics of Creatinine-Adjusted Urinary Metabolites
+```{r message=FALSE, warning=FALSE}
 # metabolites matrix 
 metabolite_matrix = phthte_urine |> 
   select(cnp, cop, ecp, ecpt, hibp, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp) %>% 
@@ -317,28 +334,27 @@ knitr::kable(metabolite_summary_long)
 
 ```
 
-## Visualizations of Full Phthalate Metabolite Distributions, adjusted for creatinine
-
-```{r Zander - Initial Attempt Boxplot Distributions}
+### Visualizations of Full Phthalate Metabolite Distributions, Adjusted for Creatinine
+```{r message=FALSE, warning=FALSE}
 
 #First looking at the logged10 values to see the small concentrations that Alana was mentioning
 #Ordered from lowest to highest concentration distributions, can be toggled by turning off line 256
 #ggplot removes 4256 rows containing non-finite values in these visualizations
 
-log10metabolites_distrib_boxplot = phthte_creatinine |> 
-  mutate(log10_adj_conc = log10(adj_conc)) |> 
-  mutate(analyte_code = fct_reorder(analyte_code, log10(adj_conc))) |> 
+metabolites_distrib_boxplot = phthte_creatinine |> 
+  #mutate(log10_adj_conc = log10(adj_conc)) |> 
+  mutate(analyte_code = fct_reorder(analyte_code, adj_conc)) |> 
   group_by(analyte_code) |> 
-  ggplot(aes(y = log10_adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + 
+  ggplot(aes(y = adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + 
   scale_y_continuous(breaks = scales::pretty_breaks(10)) + theme(legend.position = 'none') +
    labs(
-    title = "Boxplot Distribution of Log10 Transformed Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, \nAdjusted by Creatinine",
     x = "Metabolite Coded Name",
-    y = "Log10 Adjusted Concentration (ng/mL)"
+    y = "Adjusted Concentration (ng/mL)"
   )
   
-#Completed Visualization Log10 Concentrations (ng/mL)
-log10metabolites_distrib_boxplot
+#Completed Visualization Phthalate Concentrations (ng/mL)
+metabolites_distrib_boxplot
 
 #The untransformed concentrations are quite small, but difficult to visualize because of an extreme high outliers on the metabolite "MEP", and to a lesser extent ecpt, wanted to provide a second untransformed visualization when removing that outlier
 
@@ -348,7 +364,7 @@ metabolites_distrib_boxplot = phthte_creatinine |>
   group_by(analyte_code) |> 
   ggplot(aes(y = adj_conc, x = analyte_code, fill = analyte_code)) + geom_boxplot() + theme(legend.position = 'none') +
    labs(
-    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
+    title = "Boxplot Distribution of Phthalate Metabolites found in Urine, \nAdjusted by Creatinine",
     x = "Metabolite Coded Name",
     y = "Adjusted Concentration (ng/mL)"
   )
@@ -357,24 +373,56 @@ metabolites_distrib_boxplot = phthte_creatinine |>
 metabolites_distrib_boxplot 
 
 
-log10metabolites_hisgrid = phthte_creatinine |> 
-  mutate(log10_adj_conc = log10(adj_conc)) |> 
-  mutate(analyte_code = fct_reorder(analyte_code, log10_adj_conc)) |> 
+metabolites_hisgrid = phthte_creatinine |> 
+  #mutate(log10_adj_conc = log10(adj_conc)) |> 
+  mutate(analyte_code = fct_reorder(analyte_code, adj_conc)) |> 
   group_by(analyte_code) |> 
-  ggplot(aes(x = log10_adj_conc, fill = analyte_code)) + geom_histogram() + theme(
+  ggplot(aes(x = adj_conc, fill = analyte_code)) + geom_histogram() + theme(
     legend.position = 'right') + 
   facet_wrap(. ~ analyte_code) +
-  labs(title = "Histogram Distributions of Phthalate Metabolites found in Urine, Adjusted by Creatinine",
-    x = "Log10 Transformed Adjusted Concentration (ng/mL)",
+  labs(title = "Histogram Distributions of Phthalate Metabolites found in Urine, \nAdjusted by Creatinine",
+    x = "Adjusted Concentration (ng/mL)",
     y =  "Count Observations")
 
-log10metabolites_hisgrid 
+metabolites_hisgrid 
+```
+
+# Reviewing AGP Data 
+
+### Summary Statistics of AGP
+```{r message=FALSE, warning=FALSE}
+# AGP
+## NHANES reported that no results were below the lower limit of detection.
+agp_summary_table <- agp_serum %>%
+  select(ssagp) %>% 
+  summarise(
+    min = min(ssagp, na.rm = TRUE),
+    max = max(ssagp, na.rm = TRUE),
+    median = median(ssagp, na.rm = TRUE),
+    mean = mean(ssagp, na.rm = TRUE),
+    sd = sd(ssagp, na.rm = TRUE),
+    p95 = quantile(., probs = 0.95, na.rm = TRUE),
+    count = n(),
+    percent_na = sum(is.na(ssagp)) / n() * 100
+  )
+knitr::kable(agp_summary_table)
+```
+
+### Histogram of AGP distribution 
+```{r agp_hist, message=FALSE, warning=FALSE}
+
+# histogram of AGP distribution
+
+hist(agp_serum$ssagp,
+     main = "Histogram of AGP Distribution",
+     xlab = "SS AGP",
+     col = "skyblue")
+
 ```
 
 
-
-## Phthalate Metabolite correlation matrix
-```{r}
+## Phthalate Metabolite Correlation Matrix
+```{r message=FALSE, warning=FALSE}
 
 # metabolites matrix 
 metabolite_matrix = phthte_urine |> 
@@ -396,7 +444,6 @@ corrplot(metabolite_corr_matrix,
          addCoef.col = 'grey',
          mar = c(0, 0, 1, 0),
          main = "Metabolite Correlations")
-
 corrplot(metabolite_corr_matrix, 
          method = "shade",
          mar = c(0, 0, 1, 0),
@@ -405,7 +452,7 @@ corrplot(metabolite_corr_matrix,
 
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 
 library(ggplot2)
 library(reshape2)
@@ -420,7 +467,6 @@ ggplot(cor_matrix_melted, aes(Var1, Var2, fill=value)) +
         axis.title = element_blank()) +
   ggtitle("Metabolite Heatmap") +
   coord_fixed()
-
 library(pheatmap)
 pheatmap(metabolite_corr_matrix, 
          clustering_distance_rows = "euclidean",
@@ -428,6 +474,16 @@ pheatmap(metabolite_corr_matrix,
          clustering_method = "complete",
          color = colorRampPalette(c("palegreen", "turquoise", "cornflowerblue"))(100),
          main = "Metabolite Correlation Heirarchical Clustering")
-
-
 ```
+
+# References
+
+- NHANES 2017-2018 Cohort Codebooks and Documentation
+  - Phthlate Metabolites: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
+  - AGP Biomarker https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
+  - Cohort Demographic Variables https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
+- Jurewicz, J., & Hanke, W. (2011). Exposure to phthalates: reproductive outcome and children health. A review of epidemiological studies. *International journal of occupational medicine and environmental health, 24*, 115-141.
+- Kim, Y. M., Kim, J., Cheong, H. K., Jeon, B. H., & Ahn, K. (2018). Exposure to phthalates aggravates pulmonary function and airway inflammation in asthmatic children. *PLoS One, 13(12)*, e0208553.
+- Lottrup, G., Andersson, A. M., Leffers, H., Mortensen, G. K., Toppari, J., Skakkebaek, N. E., & Main, K. M. (2006). Possible impact of phthalates on infant reproductive health. *International journal of andrology, 29(1)*, 172-180.
+- Pahwa R, Goyal A, Jialal I. Chronic Inflammation. [Updated 2023 Aug 7]. In: StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing; 2024 Jan-. Available from: https://www.ncbi.nlm.nih.gov/books/NBK493173/#
+- Wolff, M. S., Pajak, A., Pinney, S. M., Windham, G. C., Galvez, M., Rybak, M., ... & Teitelbaum, S. L. (2017). Associations of urinary phthalate and phenol biomarkers with menarche in a multiethnic cohort of young girls. *Reproductive Toxicology, 67*, 56-64.
