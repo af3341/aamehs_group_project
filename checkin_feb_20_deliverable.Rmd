@@ -87,10 +87,16 @@ demo =
 phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
-  rename_with(~ gsub("^urx", "", .), starts_with("urx"))
+  rename_with(~ gsub("^urx", "", .), starts_with("urx")) 
+
+summary(phthte_urine) #2986 obs
+
+phthte_urine =
+  phthte_urine %>% 
+  filter(!rowSums(is.na(select(., cnp:urdmzplc))) == ncol(select(., cnp:urdmzplc))) # there are many participants with no values for any of the metabolites, so i am dropping them from the dataset went from 2986 obs to 2762
+  
   
 # for now, leaving the <LOD comment columns (i.e, columns started wit urd) as they are 
-# 2986 obs
 ```
 
 ### Adjusting Phthalate Urine Data for Creatinine
@@ -110,7 +116,7 @@ phthte_creatinine =
                names_to = "analyte_code",
                values_to = "reported_result") #pivoted longer so that i can map in the next step
 
-#56734 obs 
+#52478 obs 
 
 #urinary [phth] in ng/mL
 # urinary [creatinine] in mg/dL so need to get this to ng/mL

@@ -1,0 +1,156 @@
+---
+title: "joining_data"
+author: "Alana Ferris"
+date: "2024-03-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(foreign)
+library(dplyr)
+```
+
+### Reading in Relevant NHANES 2017-2018 Data
+* NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
+* weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
+```{r message=FALSE, warning=FALSE}
+# phthalates and plasticizers metabolites - urine 
+# codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
+phthte_urine =
+  read.xport("data/PHTHTE_J.XPT") %>% 
+  janitor::clean_names()
+
+# urine creatinine levels 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/ALB_CR_J.htm
+creatinine_urine =
+  read.xport("data/ALB_CR_J.XPT") %>% 
+  janitor::clean_names()
+
+# Alpha-1-Acid Glycoprotein - Serum
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
+agp_serum =
+  read.xport("data/SSAGP_J.XPT") %>% 
+  janitor::clean_names()
+
+# Demographic variables and sample weights 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
+demo =
+  read.xport("data/DEMO_J.XPT") |> 
+  janitor::clean_names()
+```
+
+### Cleaning Variable Names of Phthalate Urine Data 
+```{r message=FALSE, warning=FALSE}
+phthte_urine =
+  phthte_urine %>% 
+  rename(weights = wtsb2yr) %>%
+  rename_with(~ gsub("^urx", "", .), starts_with("urx")) %>% 
+  filter(!weights == "0")
+```
+
+### Adjusting Phthalate Urine Data for Creatinine
+```{r message=FALSE, warning=FALSE}
+# merging Phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
+# dropping albumin from creatinine dataset
+creatinine_urine =
+  creatinine_urine %>% 
+  select(seqn, urxucr, urducrlc) #dropping urxcrs bc i dont want creatinine expressed in those units
+#7936 obs
+
+#merging creatinine data with phthalate data
+phthte_creatinine =
+  merge(creatinine_urine, phthte_urine, by = "seqn") %>%
+  select(!starts_with("urd")) %>% #dropped <LOD columns for ease of pivoting
+  pivot_longer(cols = cnp:mzp,  
+               names_to = "analyte_code",
+               values_to = "reported_result") #pivoted longer so that i can map in the next step
+
+#54169 obs 
+
+#urinary [phth] in ng/mL
+# urinary [creatinine] in mg/dL so need to get this to ng/mL
+
+# Urinary creatinine concentrations, specific gravity, and osmolality are common methods for adjusting dilution. The most widely used method is creatinine adjustment that involves dividing the analyte concentration by the creatinine concentration. Analyte results are then reported as weight of analyte per gram of creatinine (micrograms analyte per gram creatinine).
+
+# making a new column with creatinine-adjusted [phthalate]
+phthte_creatinine =
+  phthte_creatinine %>% 
+  mutate(ng_per_ml_creatinine = urxucr*10000) %>% #here converting mg/dL to ng/mL--> 1mg/dL = 10,000ng/mL
+  mutate(adj_conc = reported_result/ng_per_ml_creatinine)
+```
+
+### Cleaning Variable Names of Demographic Data
+```{r message=FALSE, warning=FALSE}
+# drop unneeded variables from dataset 
+demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
+
+demo <- demo |> 
+  rename(gender = riagendr, 
+         age_yrs_screen = ridageyr, 
+         age_mon_screen = ridagemn, 
+         race_ethn1 = ridreth1,
+         race_ethn3 = ridreth3, 
+         time_period = ridexmon, 
+         age_mon_screen = ridagemn,
+         age_mon_exam = ridexagm, 
+         birth_country = dmdborn4, 
+         citizenship = dmdcitzn,
+         years_us = dmdyrsus, 
+         education = dmdeduc3, 
+         lang_pers_quest = sialang, 
+         proxy_pers_quest = siaproxy, 
+         interpret_pers_quest = siaintrp, 
+         lang_fam_interview = fialang, 
+         proxy_fam_interview = fiaproxy, 
+         interpret_fam_interview = fiaintrp,
+         lang_capi = mialang, 
+         proxy_capi = miaproxy, 
+         interpret_capi = miaintrp, 
+         lang_acasi = aialanga, 
+         hh_size = dmdhhsiz, 
+         fam_size = dmdfmsiz, 
+         hh_young_children = dmdhhsza,
+         hh_children = dmdhhszb, 
+         hh_adults = dmdhhsze, 
+         weight_2yr_intervew = wtint2yr,
+         weight_2yr_mec = wtmec2yr, 
+         variance_psu = sdmvpsu, 
+         variance_stratum = sdmvstra, 
+         income_hh_annual = indhhin2, 
+         income_family_annual = indfmin2, 
+         income_poverty_ratio = indfmpir)
+```
+
+### Subsetting Demographic Data to Ages 3-16 
+```{r message=FALSE, warning=FALSE}
+demo <- demo |> 
+  filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
+```
+
+### Joining demographic, phthalate, and agp data
+```{r}
+#making phthalate adjusted with creatinine dataset wide so can join with demo data
+wide_phth_creat =
+  phthte_creatinine %>%
+  select(-reported_result, -ng_per_ml_creatinine) %>% 
+  pivot_wider(names_from = "analyte_code",
+              values_from = "adj_conc") 
+#noticed that participant #93739, 93771, has no data for any of the pththalate metabolites, even in phthte_urine dataset, so should drop them from further analysis?
+# there are many participants with no values for any of them , even in phthte_urine dataset 
+# went back to checkin_feb_20_deliverable to get rid of them there 
+
+
+all_data =
+  inner_join(demo, wide_phth_creat, by = "seqn") #915 people with demo and phthalate data
+
+
+exp_outcome =
+  inner_join(wide_phth_creat, agp_serum, by = "seqn") %>% 
+  filter(!is.na(ssagp)) #662 participants that provided agp samples and have phthalate data for 
+  
+summary(exp_outcome)
+(292/954)*100
+```
+
