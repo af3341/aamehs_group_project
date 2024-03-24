@@ -169,11 +169,9 @@ summary(lin_model)
 
 total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp), data = exp_outcome)
 
-summary(total_model)
-
 #edf not equal to 1 for ecpt, mcoh, mep, mhht, mhnc, mhp, mnp
+#going to fit GAM models with penalized splines for those 7 metabolites 
 ```
-
 
 ```{r}
 #fit ecpt model with penalized spline 
@@ -200,7 +198,7 @@ pred.ecpt <- pred.ecpt |>
   mutate(pred.centered = s.ecpt.,
           se = s.ecpt..1)
 
-# 7e.iv Compute 95% confidence intervals 
+#compute 95% confidence intervals 
 
 pred.ecpt <- pred.ecpt  |> 
   mutate( lci.centered = pred.centered - 1.96*se,
@@ -212,51 +210,8 @@ pred.ecpt <- pred.ecpt |>
 pred.ecpt <- cbind(exp_outcome, pred.ecpt)
 #having problem binding datasets because of different number of rows
 
-#next steps: uncenter data, plot 
+#next steps: uncenter data and plot 
 ```
 
 
-```{r}
-#fit mcoh model with penalized spline 
-
-mcoh_model <- gam(ssagp ~ s(mcoh), data = exp_outcome)
-
-summary(mcoh_model)
-
-#extract penalty 
-mcoh_model$sp
-
-#plot model 
-plot(mcoh_model)
-
-#construct predictions based on the model 
-pred.mcoh <- predict(mcoh_model, se.fit = TRUE, type = "terms")
-
-#convert to dataframe 
-pred.mcoh <- as.data.frame(pred.mcoh)
-
-dim(pred.mcoh)
-
-#combine predictions and standard errors 
-
-pred.mcoh <- pred.mcoh |> 
-  mutate(pred.centered = s.mcoh.,
-          se = s.mcoh..1)
-
-# 7e.iv Compute 95% confidence intervals 
-
-pred.mcoh <- pred.mcoh  |> 
-  mutate( lci.centered = pred.centered - 1.96*se,
-          uci.centered = pred.centered + 1.96*se)
-
-pred.mcoh <- pred.mcoh |> 
-  select(pred.centered, se, lci.centered, uci.centered)
-
-pred.mcoh <- cbind(exp_outcome, pred.mcoh)
-#having problem binding datasets because of different number of rows
-
-#next steps: uncenter data, plot 
-```
-
-```
 
