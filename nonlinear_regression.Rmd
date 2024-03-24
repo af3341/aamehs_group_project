@@ -170,48 +170,46 @@ summary(lin_model)
 total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp), data = exp_outcome)
 
 #edf not equal to 1 for ecpt, mcoh, mep, mhht, mhnc, mhp, mnp
-#going to fit GAM models with penalized splines for those 7 metabolites 
+#going to fit GAM models with penalized splines for those 7 metabolites
 ```
 
 ```{r}
-#fit ecpt model with penalized spline 
-
+# Fit GAM model for ecpt with penalized spline 
 ecpt_model <- gam(ssagp ~ s(ecpt), data = exp_outcome)
 
-summary(ecpt_model)
+# Generate predictions and standard errors
+pred_ecpt <- predict(ecpt_model, se.fit = TRUE)
 
-#extract penalty 
-ecpt_model$sp
+# Create dataframe for predictions and standard errors
+pred_ecpt_df <- data.frame(
+  pred_centered = pred_ecpt$fit,
+  se = pred_ecpt$se.fit,
+  lci_centered = pred_ecpt$fit - 1.96 * pred_ecpt$se.fit,
+  uci_centered = pred_ecpt$fit + 1.96 * pred_ecpt$se.fit
+)
 
-#plot model 
-plot(ecpt_model)
+#exclude missing values from original dataset and bind two datasets 
+exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
 
-#construct predictions based on the model 
-pred.ecpt <- predict(ecpt_model, se.fit = TRUE, type = "terms")
+# Combine predictions and original dataset
+pred_ecpt_df <- cbind(exp_outcome, pred_ecpt_df)
 
-#convert to dataframe 
-pred.ecpt <- as.data.frame(pred.ecpt)
+# Uncenter data
+pred_ecpt_df$pred_agp <- pred_ecpt_df$pred_centered + mean(exp_outcome$ssagp)
+pred_ecpt_df$lci_agp <- pred_ecpt_df$lci_centered + mean(exp_outcome$ssagp)
+pred_ecpt_df$uci_agp <- pred_ecpt_df$uci_centered + mean(exp_outcome$ssagp)
 
-#combine predictions and standard errors 
-
-pred.ecpt <- pred.ecpt |> 
-  mutate(pred.centered = s.ecpt.,
-          se = s.ecpt..1)
-
-#compute 95% confidence intervals 
-
-pred.ecpt <- pred.ecpt  |> 
-  mutate( lci.centered = pred.centered - 1.96*se,
-          uci.centered = pred.centered + 1.96*se)
-
-pred.ecpt <- pred.ecpt |> 
-  select(pred.centered, se, lci.centered, uci.centered)
-
-pred.ecpt <- cbind(exp_outcome, pred.ecpt)
-#having problem binding datasets because of different number of rows
-
-#next steps: uncenter data and plot 
+# Plot
+ggplot(pred_ecpt_df, aes(x = ecpt, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("ecpt (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+ggtitle("Non-linear relationship with penalized splines between ecpt and AGP")
 ```
 
+```{r}
+
+```
 
 
