@@ -1,12 +1,14 @@
 ---
-title: "nonlinear_regression"
+title: "Nonlinear Regression and PCA Results Outline"
 output: html_document
 date: "2024-03-24"
 ---
 
-These are preliminary analyses for the non-linear regression of phthalate metabolites on AGP concentration in children aged 3-16 years old. We ran GAM models with penalized splines for each metabolite that had an effective degrees of freedom greater than 1. We also ran a multiple regression model with the same metabolites and covariates to see if the metabolites were still significant predictors of AGP concentration when adjusting for demographic variables. 
+These are preliminary analyses for non-linear regression of phthalate metabolites on AGP concentration and PCA of phthalate metabolites in children aged 3-16 years old. 
 
-Moving forward, should we include all the metabolites together in one model or run separate models for each metabolite? (there are 19 different metabolite alternatives) We're thinking of including the 8 metabolites that had edf > 1 with splines in the final model and those with edf = 1 with no spline. Does this make sense?  
+For non-linear regression, we ran GAM models with penalized splines for each metabolite that had an effective degrees of freedom greater than 1. We also ran a multiple regression model with the same metabolites and covariates to see if the metabolites were still significant predictors of AGP concentration when adjusting for demographic variables. 
+
+Moving forward, should we include all the metabolites together in one model or run separate models for each metabolite? (there are 19 different metabolite alternatives) We're thinking of including the 8 metabolites that had edf > 1 with splines in the final model and those with edf = 1 with no spline. Does this make sense? 
 
 ```{r setup, include=FALSE, echo = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -17,10 +19,11 @@ library(mgcv)
 library(splines)
 ```
 
+```{r message=FALSE, warning=FALSE, echo = FALSE}
 ### Reading in Relevant NHANES 2017-2018 Data
 * NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
 * weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
-```{r message=FALSE, warning=FALSE, echo = FALSE}
+
 # phthalates and plasticizers metabolites - urine 
 # codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
 phthte_urine =
@@ -46,8 +49,9 @@ demo =
   janitor::clean_names()
 ```
 
-### Cleaning Variable Names of Phthalate Urine Data 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Cleaning Variable Names of Phthalate Urine Data 
+
 phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
@@ -55,8 +59,9 @@ phthte_urine =
   filter(!weights == "0")
 ```
 
-### Adjusting Phthalate Urine Data for Creatinine
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Adjusting Phthalate Urine Data for Creatinine
+
 # merging Phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
 # dropping albumin from creatinine dataset
 creatinine_urine =
@@ -86,8 +91,9 @@ phthte_creatinine =
   mutate(adj_conc = reported_result/ng_per_ml_creatinine)
 ```
 
-### Cleaning Variable Names of Demographic Data
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Cleaning Variable Names of Demographic Data
+
 # drop unneeded variables from dataset 
 demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
 
@@ -128,14 +134,16 @@ demo <- demo |>
          income_poverty_ratio = indfmpir)
 ```
 
-### Subsetting Demographic Data to Ages 3-16 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Subsetting Demographic Data to Ages 3-16 
+
 demo <- demo |> 
   filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
 ```
 
-### Joining demographic, phthalate, and agp data
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
+#Joining demographic, phthalate, and agp data
+
 #making phthalate adjusted with creatinine dataset wide so can join with demo data
 wide_phth_creat =
   phthte_creatinine %>%
@@ -510,7 +518,6 @@ In this model, there are greater differences between children's ethnicities and 
 # PCA Attempt (will add FA)
 
 ```{r pca, echo=FALSE}
-
 
 # PCA first attempt, will improve after PCA/FA class
 
