@@ -4,7 +4,11 @@ output: html_document
 date: "2024-03-24"
 ---
 
-```{r setup, include=FALSE}
+These are preliminary analyses for the non-linear regression of phthalate metabolites on AGP concentration in children aged 3-16 years old. We ran GAM models with penalized splines for each metabolite that had an effective degrees of freedom greater than 1. We also ran a multiple regression model with the same metabolites and covariates to see if the metabolites were still significant predictors of AGP concentration when adjusting for demographic variables. 
+
+Moving forward, should we include all the metabolites together in one model or run separate models for each metabolite? (there are 19 different metabolite alternatives) We're thinking of including the 8 metabolites that had edf > 1 with splines in the final model and those with edf = 1 with no spline. Does this make sense?  
+
+```{r setup, include=FALSE, echo = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(foreign)
@@ -16,7 +20,7 @@ library(splines)
 ### Reading in Relevant NHANES 2017-2018 Data
 * NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
 * weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, echo = FALSE}
 # phthalates and plasticizers metabolites - urine 
 # codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
 phthte_urine =
@@ -43,7 +47,7 @@ demo =
 ```
 
 ### Cleaning Variable Names of Phthalate Urine Data 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, echo = FALSE}
 phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
@@ -52,7 +56,7 @@ phthte_urine =
 ```
 
 ### Adjusting Phthalate Urine Data for Creatinine
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, echo = FALSE}
 # merging Phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
 # dropping albumin from creatinine dataset
 creatinine_urine =
@@ -83,7 +87,7 @@ phthte_creatinine =
 ```
 
 ### Cleaning Variable Names of Demographic Data
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, echo = FALSE}
 # drop unneeded variables from dataset 
 demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
 
@@ -125,13 +129,13 @@ demo <- demo |>
 ```
 
 ### Subsetting Demographic Data to Ages 3-16 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, echo = FALSE}
 demo <- demo |> 
   filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
 ```
 
 ### Joining demographic, phthalate, and agp data
-```{r}
+```{r message=FALSE, warning=FALSE, echo = FALSE}
 #making phthalate adjusted with creatinine dataset wide so can join with demo data
 wide_phth_creat =
   phthte_creatinine %>%
@@ -156,7 +160,7 @@ summary(exp_outcome)
 ```
 
 #Non-linear exposure-response curves 
-```{r}
+```{r message=FALSE, warning=FALSE}
 #metabolites: cnp, cop, ecp, ecpt, hipb, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp
 
 #first fit linear model 
@@ -176,7 +180,7 @@ summary(total_model)
 
 ### Indidual penalized splines for each metabolite with edf > 1 
 
-```{r ecpt model}
+```{r ecpt model, message=FALSE, warning=FALSE}
 # Fit GAM model for ecpt with penalized spline 
 ecpt_model <- gam(ssagp ~ s(ecpt), data = exp_outcome)
 
@@ -212,8 +216,8 @@ ggplot(pred_ecpt_df, aes(x = ecpt, y = pred_agp)) +
 ggtitle("Non-linear relationship with penalized splines between ecpt and AGP")
 ```
 
-```{r mcoh model}
-# Fit GAM model for ecpt with penalized spline 
+```{r mcoh model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mcoh with penalized spline 
 mcoh_model <- gam(ssagp ~ s(mcoh), data = exp_outcome)
 
 # Generate predictions and standard errors
@@ -248,8 +252,8 @@ ggplot(pred_mcoh_df, aes(x = mcoh, y = pred_agp)) +
 ggtitle("Non-linear relationship with penalized splines between mcoh and AGP")
 ```
 
-```{r mep model}
-# Fit GAM model for ecpt with penalized spline 
+```{r mep model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mep with penalized spline 
 mep_model <- gam(ssagp ~ s(mep), data = exp_outcome)
 
 # Generate predictions and standard errors
@@ -285,8 +289,8 @@ ggtitle("Non-linear relationship with penalized splines between mep and AGP")
 ```
 
 The mhht model below is likely not showing any reportable data due to the increasingly wide confidence interval at higher levels of metabolite concentration
-```{r mhht model}
-# Fit GAM model for ecpt with penalized spline 
+```{r mhht model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mhht with penalized spline 
 mhht_model <- gam(ssagp ~ s(mhht), data = exp_outcome)
 
 # Generate predictions and standard errors
@@ -321,8 +325,8 @@ ggplot(pred_mhht_df, aes(x = mhht, y = pred_agp)) +
   ggtitle("Non-linear relationship with penalized splines between mhht and AGP")
 ```
 
-```{r mhnc model}
-# Fit GAM model for ecpt with penalized spline 
+```{r mhnc model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mhnc with penalized spline 
 mhnc_model <- gam(ssagp ~ s(mhnc), data = exp_outcome)
 
 # Generate predictions and standard errors
@@ -358,8 +362,8 @@ ggplot(pred_mhnc_df, aes(x = mhnc, y = pred_agp)) +
 ```
 
 This one also has an extremely wide confidence interval at larger values
-```{r mhp model}
-# Fit GAM model for ecpt with penalized spline 
+```{r mhp model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mph with penalized spline 
 mhp_model <- gam(ssagp ~ s(mhp), data = exp_outcome)
 
 # Generate predictions and standard errors
@@ -394,8 +398,8 @@ ggplot(pred_mhp_df, aes(x =mhp, y = pred_agp)) +
   ggtitle("Non-linear relationship with penalized splines between mhp and AGP")
 ```
 
-```{r mnp model}
-# Fit GAM model for ecpt with penalized spline 
+```{r mnp model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mnp with penalized spline 
 mnp_model <- gam(ssagp ~ s(mnp), data = exp_outcome)
 
 # Generate predictions and standard errors
@@ -431,8 +435,8 @@ ggplot(pred_mnp_df, aes(x =mnp, y = pred_agp)) +
 ```
 
 Another situation with very wide confidence intervals at higher metabolite concentrations
-```{r mzp model}
-# Fit GAM model for ecpt with penalized spline 
+```{r mzp model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mzp with penalized spline 
 mzp_model <- gam(ssagp ~ s(mzp), data = exp_outcome)
 
 # Generate predictions and standard errors
@@ -467,7 +471,7 @@ ggplot(pred_mzp_df, aes(x =mzp, y = pred_agp)) +
   ggtitle("Non-linear relationship with penalized splines between mzp and AGP")
 ```
 
-```{r Demographic Covariate Model, linear regression}
+```{r Demographic Covariate Model, linear regression, message=FALSE, warning=FALSE}
 
 #Joining current demographic values we have with the exp_outcome table
 all_exp_outcome = inner_join(exp_outcome, demo, by = "seqn") |> 
@@ -478,6 +482,7 @@ all_exp_outcome = inner_join(exp_outcome, demo, by = "seqn") |>
          eth_black = case_when(race_ethn3 == 4 ~ 1, TRUE ~ 0),
          eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
          eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
+
 
 #Associations of demo variables alone
 demographic_model = lm(ssagp ~ gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_white + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
@@ -494,7 +499,7 @@ Using this initial list of covariates, we do not currently have enough evidence 
 
 **Returning to Total Model with Penalized Splines, adding covariates above**
 ```{r Adding Covariates to Penalized Spline Regression using GAM}
-total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp)+ gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_white + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_white + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
 
 summary(total_covari_model)
 #when adjusting for covariates, ecpt, mcoh, mhh, mhht, mib are the six metabolites that have an edf greater than 1
