@@ -1,6 +1,7 @@
 ---
 title: "Nonlinear Regression and PCA Results Outline"
 output: html_document
+author: "Allison Stewart, Christine Kuryla, Zander De Jesus, Alana Ferris"
 date: "2024-03-24"
 ---
 
@@ -21,8 +22,8 @@ library(splines)
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
 ### Reading in Relevant NHANES 2017-2018 Data
-* NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
-* weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
+#NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
+#weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
 
 # phthalates and plasticizers metabolites - urine 
 # codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
@@ -167,7 +168,7 @@ summary(exp_outcome)
 (292/954)*100
 ```
 
-#Non-linear exposure-response curves 
+# Non-linear exposure-response curves 
 ```{r message=FALSE, warning=FALSE}
 #metabolites: cnp, cop, ecp, ecpt, hipb, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp
 
@@ -493,26 +494,26 @@ all_exp_outcome = inner_join(exp_outcome, demo, by = "seqn") |>
 
 
 #Associations of demo variables alone
-demographic_model = lm(ssagp ~ gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_white + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+demographic_model = lm(ssagp ~ gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
 
 summary(demographic_model)
 
 #Adding covariates to simple multiple regression 
-lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_white + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
 
 summary(lin_covari_model)
 ```
 
-Using this initial list of covariates, we do not currently have enough evidence to suggest a statistically significant difference in ssagp differing across ethnic groups, gender, or income poverty ratio. Under these adjusted assumptions, both mcoh and mhp are the metabolites tht have the most significant impact on ssagp.
+Using this initial list of covariates, we do not currently have enough evidence to suggest a statistically significant difference in ssagp differing across ethnic groups, gender, or income poverty ratio. Under these adjusted assumptions, both mcoh and mhnc are the metabolites tht have the most significant impact on ssagp.
 
 **Returning to Total Model with Penalized Splines, adding covariates above**
 ```{r Adding Covariates to Penalized Spline Regression using GAM}
-total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_white + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
 
 summary(total_covari_model)
 #when adjusting for covariates, ecpt, mcoh, mhh, mhht, mib are the six metabolites that have an edf greater than 1
 ```
-In this model, there are greater differences between children's ethnicities and ssagp concentration, where Mexican American and Black children and to a lesser extent white children are having a significant per unit increase in ssagp concentration for adjusted phthalate metabolite exposure.
+In this model, there are greater differences between children's ethnicities and ssagp concentration, where Mexican American children are having a significant per unit increase in ssagp concentration for adjusted phthalate metabolite exposure.
 
 
 # PCA Attempt (will add FA)
@@ -586,7 +587,6 @@ print(loadings[,1:6])
 
 library(pheatmap)
 pheatmap(loadings[,1:8], cluster_cols = F, main = "Heatmap of PCs and Metabolites")
-
 
 ```
 
