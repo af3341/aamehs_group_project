@@ -162,9 +162,10 @@ exp_outcome =
   
 summary(exp_outcome)
 (292/954)*100
+
 ```
 
-# Research question
+# attempt 1: Research question
 What is the overall effect of exposure to mixture of phthalate/phthalate alternatives on AGP levels?
 
 ```{r}
@@ -216,17 +217,64 @@ saveRDS(fitkm, file = "data/initial_bkmr_solution.RDS")
 # Read in BKMR Model 
 fitkm <- readRDS("data/initial_bkmr_solution.RDS")
 ```
+# attempt 2: Research question
+What is the overall effect of exposure to mixture of phthalate/phthalate alternatives on AGP levels?
+
+# Fit BKMR model
+```{r}
+set.seed(111)
+
+#from nonlinear regression rmd 
+all_exp_outcome = inner_join(exp_outcome, demo, by = "seqn")
+summary(all_exp_outcome)
+#280 obs
+
+#create a matrix of exposures
+exposures <- select(all_exp_outcome, cnp:mzp)
+
+exposures_matrix <- as.matrix(exposures)
+
+#Put confounders in a matrix
+confounders <- all_exp_outcome %>%
+  dplyr::select(gender, age_yrs_screen, race_ethn1, race_ethn3) #removing income poverty ratio for now bc i think we can't have missing data for this
+
+confounders <- as.matrix(confounders)
+summary(confounders)
+
+#Fit BKMR model
+# This will take a ~8 minutes to run. 
+
+adj_fitkm <- kmbayes(y = all_exp_outcome$ssagp,   # outcome variable
+                 Z = exposures_matrix,       # dataframe of exposures
+                 X = confounders, # dataframe of confounders
+                 iter = 10000,    # number of iterations
+                 verbose = FALSE, # print interim progress of model?
+                 varsel = TRUE)   # 
+
+#Save BMKR Model
+saveRDS(adj_fitkm, file = "data/adj_bkmr_solution.RDS")
+
+# Read in BKMR Model 
+adj_fitkm <- readRDS("data/adj_bkmr_solution.RDS")
+```
 
 # Assess BKMR Convergence
 ```{r}
-# i didn't run confounders though so idk if this means anything ...? or if i can assess convergence at all?
-TracePlot(fit = fitkm, par = "beta")
+# betas are confounders 
+TracePlot(fit = adj_fitkm, par = "beta") #looks converged
 
-TracePlot(fit = fitkm, par = "sigsq.eps")
+TracePlot(fit = adj_fitkm, par = "beta", comp = 1) #looks converged
 
-TracePlot(fit = fitkm, par = "r", comp = 1)
-TracePlot(fit = fitkm, par = "r", comp = 2)
-# im not sure if r seems converged...
+TracePlot(fit = adj_fitkm, par = "beta", comp = 2) # looks converged 
+
+# "sigsq.eps" and "r" are tuning parameters of the bayesian model 
+# sigsq refers to the sigma of the kernel 
+# and r refers to the parameter used to estimate the PIP 
+TracePlot(fit = adj_fitkm, par = "sigsq.eps") #looks converged
+
+TracePlot(fit = adj_fitkm, par = "r", comp = 1) 
+TracePlot(fit = adj_fitkm, par = "r", comp = 2)
+# im not sure if r seems converged...idk how to interpret this one 
 
 ```
 
@@ -236,9 +284,9 @@ TracePlot(fit = fitkm, par = "r", comp = 2)
 # The PIP is the probability that the exposure is an important 
 # part of the mixture
 
-ExtractPIPs(fitkm, z.names = c("cnp", "cop", "ecp", "ecpt", "hibp", "mbp", "mc1", "mcoh", "mbp", "mhbp", "mhh", "mhht", "mhnc", "mhp", "mib", "mnp", "moh", "monp", "mzp"))
+ExtractPIPs(adj_fitkm, z.names = c("cnp", "cop", "ecp", "ecpt", "hibp", "mbp", "mc1", "mcoh", "mep", "mhbp", "mhh", "mhht", "mhnc", "mhp", "mib", "mnp", "moh", "monp", "mzp"))
 
-#they all basically have the same importance.. 
+#they all basically have the same importance...mep seems to maybe have highest by slightest amount
 
 # Set plot theme 
 plotTheme <- theme(axis.title = element_text(size = 19), 
@@ -260,7 +308,7 @@ plotTheme <- theme(axis.title = element_text(size = 19),
 # and one among females
 # note: we can ignore the warning about tibble
 
-pred.resp.univar <- PredictorResponseUnivar(fit = fitkm, 
+adj_pred.resp.univar <- PredictorResponseUnivar(fit = adj_fitkm, 
                                             q.fixed = 0.5, # set other exposures to 50th percentile
                                             z.names = c("cnp", "cop", "ecp", "ecpt", "hibp", "mbp", "mc1", "mcoh", "mep", "mhbp", "mhh", "mhht", "mhnc", "mhp", "mib", "mnp", "moh", "monp", "mzp")) 
 
@@ -279,20 +327,20 @@ ggplot(pred.resp.univar, aes(z, est, ymin = est - 1.96*se, ymax = est + 1.96*se)
 # Estimate exposure-response for each quantile 
 
 #this takes a long time to run i dont remember how long ~1hr
-responses.overall <- OverallRiskSummaries(fit = fitkm,     # model 
-                                      y = dta$ssagp,   # outcome 
-                                      Z = exposures,       # exposures
-                                      X = NULL, # matrix of confounders 
+adj_responses.overall <- OverallRiskSummaries(fit = adj_fitkm,     # model 
+                                      y = all_exp_outcome$ssagp,   # outcome 
+                                      Z = exposures_matrix,       # exposures
+                                      X = confounders, # matrix of confounders 
                                       qs = seq(0.25, 0.75, by = 0.05), # vector of quantiles
                                       q.fixed = 0.5, 
                                       method = "exact") # estimation method
 
 #Table of Responses
-responses.overall 
+adj_responses.overall 
 
 # 4d.iii Plot
 
-ggplot(responses.overall, aes(quantile, est, ymin = est - 1.96*sd, 
+ggplot(adj_responses.overall, aes(quantile, est, ymin = est - 1.96*sd, 
                               ymax = est + 1.96*sd)) + 
   geom_pointrange() + 
   ylab("Change in Expected AGP") + 
