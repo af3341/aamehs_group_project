@@ -481,7 +481,6 @@ ggplot(pred_mzp_df, aes(x =mzp, y = pred_agp)) +
 ```
 
 ```{r Demographic Covariate Model, linear regression, message=FALSE, warning=FALSE}
-
 #Joining current demographic values we have with the exp_outcome table
 all_exp_outcome = inner_join(exp_outcome, demo, by = "seqn") |> 
   mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
@@ -514,6 +513,136 @@ summary(total_covari_model)
 #when adjusting for covariates, ecpt, mcoh, mhh, mhht, mib are the six metabolites that have an edf greater than 1
 ```
 In this model, there are greater differences between children's ethnicities and ssagp concentration, where Mexican American children are having a significant per unit increase in ssagp concentration for adjusted phthalate metabolite exposure.
+
+# Natural Splines 
+
+```{r Natural Splines, message=FALSE, warning=FALSE}
+#Fit natural splines for metabolites with edf not equal to 1 - ecpt, mcoh, mep, mhht, mhnc, mhp, mnp, mzp
+
+# Fit lm model for ecpt with natural spline
+ecpt_ns_2 <- lm(ssagp ~ ns(ecpt, df = 2), data = exp_outcome)
+ecpt_ns_3 <- lm(ssagp ~ ns(ecpt, df = 3), data = exp_outcome)
+ecpt_ns_4 <- lm(ssagp ~ ns(ecpt, df = 4), data = exp_outcome)
+ecpt_ns_5 <- lm(ssagp ~ ns(ecpt, df = 5), data = exp_outcome)
+
+AIC(ecpt_ns_2)
+AIC(ecpt_ns_3)
+AIC(ecpt_ns_4)
+AIC(ecpt_ns_5)
+
+
+summary(ecpt_ns_3)
+
+# model with df 3 has the lowest AIC 
+
+# construct predictions based on model 
+predagp.ecpt.ns <- predict(ecpt_ns_3, se.fit = TRUE, type = "terms")
+
+head(predagp.ecpt.ns)
+
+# convert to dataframe 
+
+predagp.ecpt.ns <- as.data.frame(predagp.ecpt.ns)
+
+# Rename predictions and standard errors
+
+predagp.ecpt.ns  <- predagp.ecpt.ns |> 
+  mutate( pred.centered = ns.ecpt..df...3.,
+          se = ns.ecpt..df...3..1)
+
+# 6c.iv Compute 95% confidence intervals 
+
+predagp.ecpt.ns <- predagp.ecpt.ns |>  
+  mutate( lci.centered = pred.centered - 1.96*se,
+          uci.centered = pred.centered + 1.96*se)
+
+# Keep only variables we need
+
+predagp.ecpt.ns <- predagp.ecpt.ns |> 
+  select(pred.centered, se, lci.centered, uci.centered)
+
+# Combine with data 
+
+predagp.ecpt.ns <- predagp.ecpt.ns |> bind_cols(exp_outcome)
+
+#  Uncenter 
+
+predagp.ecpt.ns <- predagp.ecpt.ns |>  mutate(predagp = pred.centered + mean(ssagp),
+                                        lciagp = lci.centered + mean(ssagp),
+                                        uciagp = uci.centered + mean(ssagp))
+
+# Plot
+
+ggplot(predagp.ecpt.ns, aes(ssagp)) + 
+  geom_line(aes(y = predagp)) + 
+  geom_line(aes(y = lciagp), color = "darkgrey") + 
+  geom_line(aes(y = uciagp), color = "darkgrey") + 
+  xlab(expression("Average AGP")) + 
+  ylab("Predicted AGP (95% CI)") + 
+  theme(axis.text = element_text(size = 15)) + 
+  theme(axis.title = element_text(size = 20))
+```
+
+```{r}
+
+# Fit lm model for moh with natural spline
+moh_ns_2 <- lm(ssagp ~ ns(moh, df = 2), data = exp_outcome)
+moh_ns_3 <- lm(ssagp ~ ns(moh, df = 3), data = exp_outcome)
+moh_ns_4 <- lm(ssagp ~ ns(moh, df = 4), data = exp_outcome)
+moh_ns_5 <- lm(ssagp ~ ns(moh, df = 5), data = exp_outcome)
+
+AIC(moh_ns_2)
+AIC(moh_ns_3)
+AIC(moh_ns_4)
+AIC(moh_ns_5)
+
+
+# construct predictions based on model 
+predagp.moh.ns <- predict(moh_ns_3, se.fit = TRUE, type = "terms")
+
+# convert to dataframe 
+
+predagp.moh.ns <- as.data.frame(predagp.moh.ns)
+
+# Rename predictions and standard errors
+
+predagp.moh.ns  <- predagp.moh.ns |> 
+  mutate( pred.centered = ns.moh..df...3.,
+          se = ns.moh..df...3..1)
+
+# 6c.iv Compute 95% confidence intervals 
+
+predagp.moh.ns <- predagp.moh.ns |>  
+  mutate( lci.centered = pred.centered - 1.96*se,
+          uci.centered = pred.centered + 1.96*se)
+
+# Keep only variables we need
+
+predagp.moh.ns <- predagp.moh.ns |> 
+  select(pred.centered, se, lci.centered, uci.centered)
+
+# Combine with data 
+
+predagp.moh.ns <- predagp.moh.ns |> bind_cols(exp_outcome)
+
+#  Uncenter 
+
+predagp.moh.ns <- predagp.moh.ns |>  mutate(predagp = pred.centered + mean(ssagp),
+                                        lciagp = lci.centered + mean(ssagp),
+                                        uciagp = uci.centered + mean(ssagp))
+
+# Plot
+
+ggplot(predagp.moh.ns, aes(ssagp)) + 
+  geom_line(aes(y = predagp)) + 
+  geom_line(aes(y = lciagp), color = "darkgrey") + 
+  geom_line(aes(y = uciagp), color = "darkgrey") + 
+  xlab(expression("Average AGP")) + 
+  ylab("Predicted AGP (95% CI)") + 
+  theme(axis.text = element_text(size = 15)) + 
+  theme(axis.title = element_text(size = 20))
+```
+
 
 
 # PCA Attempt (will add FA)
