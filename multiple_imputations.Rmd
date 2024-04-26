@@ -1,0 +1,434 @@
+---
+title: "Multiple Imputations"
+author: "Christine Lucille Kuryla"
+date: "2024-04-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Load data
+
+# Load and Clean Data
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+
+library(tidyverse)
+library(broom)
+library(dplyr)
+library(tidyverse)
+library(foreign)
+library(dplyr)
+library(mgcv)
+### Reading in Relevant NHANES 2017-2018 Data
+#NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
+#weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
+
+# phthalates and plasticizers metabolites - urine 
+# codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
+phthte_urine =
+  read.xport("data/PHTHTE_J.XPT") %>% 
+  janitor::clean_names()
+
+# urine creatinine levels 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/ALB_CR_J.htm
+creatinine_urine =
+  read.xport("data/ALB_CR_J.XPT") %>% 
+  janitor::clean_names()
+
+# Alpha-1-Acid Glycoprotein - Serum
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
+agp_serum =
+  read.xport("data/SSAGP_J.XPT") %>% 
+  janitor::clean_names()
+
+# Demographic variables and sample weights 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
+demo =
+  read.xport("data/DEMO_J.XPT") |> 
+  janitor::clean_names()
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Cleaning Variable Names of Phthalate Urine Data 
+
+phthte_urine =
+  phthte_urine %>% 
+  rename(weights = wtsb2yr) %>%
+  rename_with(~ gsub("^urx", "", .), starts_with("urx")) %>% 
+  filter(!weights == "0")
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Adjusting Phthalate Urine Data for Creatinine
+
+# merging Phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
+# dropping albumin from creatinine dataset
+creatinine_urine =
+  creatinine_urine %>% 
+  select(seqn, urxucr, urducrlc) #dropping urxcrs bc i dont want creatinine expressed in those units
+#7936 obs
+
+#merging creatinine data with phthalate data
+phthte_creatinine =
+  merge(creatinine_urine, phthte_urine, by = "seqn") %>%
+  select(!starts_with("urd")) %>% #dropped <LOD columns for ease of pivoting
+  pivot_longer(cols = cnp:mzp,  
+               names_to = "analyte_code",
+               values_to = "reported_result") #pivoted longer so that i can map in the next step
+
+#54169 obs 
+
+#urinary [phth] in ng/mL
+# urinary [creatinine] in mg/dL so need to get this to ng/mL
+
+# Urinary creatinine concentrations, specific gravity, and osmolality are common methods for adjusting dilution. The most widely used method is creatinine adjustment that involves dividing the analyte concentration by the creatinine concentration. Analyte results are then reported as weight of analyte per gram of creatinine (micrograms analyte per gram creatinine).
+
+# making a new column with creatinine-adjusted [phthalate]
+phthte_creatinine =
+  phthte_creatinine %>% 
+  mutate(ng_per_ml_creatinine = urxucr*10000) %>% #here converting mg/dL to ng/mL--> 1mg/dL = 10,000ng/mL
+  mutate(adj_conc = reported_result/ng_per_ml_creatinine)
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Cleaning Variable Names of Demographic Data
+
+# drop unneeded variables from dataset 
+demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
+
+demo <- demo |> 
+  rename(gender = riagendr, 
+         age_yrs_screen = ridageyr, 
+         age_mon_screen = ridagemn, 
+         race_ethn1 = ridreth1,
+         race_ethn3 = ridreth3, 
+         time_period = ridexmon, 
+         age_mon_screen = ridagemn,
+         age_mon_exam = ridexagm, 
+         birth_country = dmdborn4, 
+         citizenship = dmdcitzn,
+         years_us = dmdyrsus, 
+         education = dmdeduc3, 
+         lang_pers_quest = sialang, 
+         proxy_pers_quest = siaproxy, 
+         interpret_pers_quest = siaintrp, 
+         lang_fam_interview = fialang, 
+         proxy_fam_interview = fiaproxy, 
+         interpret_fam_interview = fiaintrp,
+         lang_capi = mialang, 
+         proxy_capi = miaproxy, 
+         interpret_capi = miaintrp, 
+         lang_acasi = aialanga, 
+         hh_size = dmdhhsiz, 
+         fam_size = dmdfmsiz, 
+         hh_young_children = dmdhhsza,
+         hh_children = dmdhhszb, 
+         hh_adults = dmdhhsze, 
+         weight_2yr_intervew = wtint2yr,
+         weight_2yr_mec = wtmec2yr, 
+         variance_psu = sdmvpsu, 
+         variance_stratum = sdmvstra, 
+         income_hh_annual = indhhin2, 
+         income_family_annual = indfmin2, 
+         income_poverty_ratio = indfmpir)
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Subsetting Demographic Data to Ages 3-16 
+
+demo <- demo |> 
+  filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+#Joining demographic, phthalate, and agp data
+
+#making phthalate adjusted with creatinine dataset wide so can join with demo data
+wide_phth_creat =
+  phthte_creatinine %>%
+  select(-reported_result, -ng_per_ml_creatinine) %>% 
+  pivot_wider(names_from = "analyte_code",
+              values_from = "adj_conc") %>% 
+  filter(!rowSums(is.na(select(., cnp:mzp))) == ncol(select(., cnp:mzp))) #2851 to 2762
+#noticed that participant #93739, 93771, has no data for any of the pththalate metabolites, even in phthte_urine dataset, so should drop them from further analysis?
+# there are many participants with no values for any of them , even in phthte_urine dataset 
+# went back to checkin_feb_20_deliverable to get rid of them there 
+
+
+all_data =
+  inner_join(demo, wide_phth_creat, by = "seqn") #915 people with demo and phthalate data
+
+
+exp_outcome =
+  inner_join(wide_phth_creat, agp_serum, by = "seqn") %>% 
+  filter(!is.na(ssagp)) #662 participants that provided agp samples and have phthalate data for 
+  
+summary(exp_outcome)
+(292/954)*100
+
+```
+
+# Dataset
+
+```{r}
+
+demo_new = demo |> 
+  select(seqn, gender, age_yrs_screen, race_ethn1, race_ethn3, income_family_annual)
+
+all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |> 
+  mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
+  mutate(eth_mex = case_when(race_ethn3 == 1 ~ 1, TRUE ~ 0),
+         eth_hisp_oth = case_when(race_ethn3 == 2 ~ 1, TRUE ~ 0),
+         eth_white = case_when(race_ethn3 == 3 ~ 1, TRUE ~ 0),
+         eth_black = case_when(race_ethn3 == 4 ~ 1, TRUE ~ 0),
+         eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
+         eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
+
+sum(exp_outcome$seqn %in% all_data$seqn)
+
+# All of the covariates, exposure, and outcome data
+all_var <- inner_join(exp_outcome, all_data, by = "seqn") |> 
+  mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
+  mutate(eth_mex = case_when(race_ethn3 == 1 ~ 1, TRUE ~ 0),
+         eth_hisp_oth = case_when(race_ethn3 == 2 ~ 1, TRUE ~ 0),
+         eth_white = case_when(race_ethn3 == 3 ~ 1, TRUE ~ 0),
+         eth_black = case_when(race_ethn3 == 4 ~ 1, TRUE ~ 0),
+         eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
+         eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
+
+```
+
+
+# Multiple Imputations
+
+```{r}
+## A: Only Confounder Data Missing
+# A1: Load MAR Data - Confounders Only
+# A2: Visualize Missingness
+# A3: Impute Missing Data 
+# A4: Fit Model on Imputed Data
+# A5: Pool Models
+# A6: Compare to Model from Original Data
+
+library(readr)
+library(dplyr)
+library(mice)
+library(VIM)
+
+# 0c Declare directories
+
+# 0d Turn off scientific notation
+
+options(scipen=999)
+
+####*******************************************
+
+##*************************************##
+#### A: Only Confounder Data Missing ####
+##*************************************##
+
+####********************
+##### A1: Load Data ####
+####********************
+
+# 1a Load data 
+
+#df.Conf.miss <- read_csv(paste0(ProjectFolder, "county_bmi_miss_confounders.csv"))
+
+df.Conf.miss <- all_var
+#df.Conf.miss <- all_exp_outcome
+
+# 1b Review data
+
+head(df.Conf.miss)
+
+####*******************************
+#### A2: Visualize Missingness ####
+####*******************************
+
+# 2a Count number of missing for each variable
+
+summary(df.Conf.miss)
+
+sum(is.na(df.Conf.miss$gender))
+sum(is.na(df.Conf.miss$age_yrs_screen))
+sum(is.na(df.Conf.miss$race_ethn1))
+sum(is.na(df.Conf.miss$race_ethn3))
+sum(is.na(df.Conf.miss$income_family_annual))
+
+# 2b Review pattern of missingness
+
+# We will isolate just the variables with missing data so it is easier to see them 
+df.miss.vars <- df.Conf.miss %>% select(income_family_annual)
+
+# 2b.i Visualize with VIM package 
+
+aggr_plot <- aggr(df.miss.vars, 
+                  col=c('navyblue','red'), 
+                  numbers=TRUE,
+                  sortVars=TRUE, 
+                  labels=names(df.miss.vars), 
+                  cex.axis=.7, 
+                  gap=3, 
+                  ylab=c("Histogram of missing data","Pattern"))
+
+##** Class Question **##
+# Which variable has the most missing data? 
+# What is the most common missing pattern? 
+##*****************************************************************##
+
+# 2b.ii Visualize with mice package
+
+# this doesn't work because there is only one column of interest with missing data
+
+# png(paste0("MissingPatterns.png"))
+# md.pattern(df.miss.vars)
+# dev.off()
+
+# 2c Visual missingness of two variables 
+
+# df.miss.vars2 <- df.Conf.miss %>% dplyr::select(MedHInc, LTHS)
+# dev.off()
+# marginplot(df.miss.vars2, xlab = "Median Household Income", ylab = "Percent Less than HS")
+```
+
+
+```{r impute, eval = FALSE}
+####*****************************
+#### A3: Impute Missing Data ####
+####*****************************
+
+# 3a Create imputed datasets
+
+MImput.df.Conf <- mice(df.Conf.miss,     # dataset
+              m = 5,        # number of imputed datasets to create
+              maxit = 50,   # number of iterations to create prediction models 
+              meth = 'pmm', # method for imputation- depends on the class of missing variables
+                            # pmm usually performs best for continuous variables
+              seed = 500)   # our seed
+
+# education and year_us are linearly dependent so need to remove one of them 
+# all(df.Conf.miss$education == df.Conf.miss$years_us)
+# 
+# library(caret)
+# nzv <- nearZeroVar(df.Conf.miss)
+# colnames(df.Conf.miss)[nzv]
+# df.Conf.miss <- df.Conf.miss[, -nzv]
+
+MImput.df.Conf <- mice(df.Conf.miss %>% select(-c("years_us", "education")),     # dataset
+              m = 5,        # number of imputed datasets to create
+              maxit = 50,   # number of iterations to create prediction models 
+              meth = 'pmm', # method for imputation- depends on the class of missing variables
+                            # pmm usually performs best for continuous variables
+              seed = 500)   # our seed
+
+# We get a warning because there 1 one county missing the ClimateRegion
+# And therefore ClimateRegion cannot be included in the imputation equations
+
+# 3b Review imputed datasets
+
+ls(MImput.df.Conf)
+summary(MImput.df.Conf)
+
+# 3c Review imputed values for a single variable 
+
+MImput.df.Conf$imp$income_family_annual
+
+
+# 3d Compare density plot of imputed data versus original data 
+
+densityplot(MImput.df.Conf)
+
+
+# all_exp_outcome has our original unimputed data
+
+
+####***********************************
+#### A4: Fit Model on Imputed Data ####
+####***********************************
+
+# 4A Fit models
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ mhp + gender + age_yrs_screen + race_ethn1 + race_ethn3 + income_family_annual))
+
+##** Class Question **##
+# How many regression models do I run in this step? 
+##*****************************************************************##
+
+####*********************
+#### A5: Pool Models ####
+####*********************
+
+# 5a Model summary 
+
+pool(mod.MImput.Conf)
+
+##** Class Question **##
+# What are the 2 sources of variance when we use multiple imputation? 
+##*****************************************************************##
+
+# ubar = average within-imputation variance (sample variance)
+# b = between-imputation variance
+
+# riv = relative increase in variance due to missingness
+# lambda = proportion of variance due to missingness 
+# fmi = fraction of missing information
+
+# Let us look at just PM2.5 
+pool(mod.MImput.Conf)[2,]
+
+##** Class Question **##
+# For the estimate of Beta for PM2.5, 
+# which is greater: 
+# variance within-imputation variance 
+# or between-imputation variance? 
+##*****************************************************************##
+
+# we can directly compute the standard error of Beta 
+# from the two sources of variance
+# Var = se^2
+# se = sqrt(ubar + ((m+ 1)/m)* b))
+
+sqrt(0.0007955 + ((5 + 1)/5) * 0.000000335992)
+
+# 5b Model summary II 
+# summary() will compute the standard error for us
+
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+####*********************************************
+#### A6: Compare to Model from Original Data ####
+####*********************************************
+
+# 6a Readin original, complete data 
+
+df.complete <- read_csv(paste0(ProjectFolder, "county_bmi_pm_confounders_10.csv"))
+
+# 6b Create model with original data
+
+mod.NoMiss <- summary(lm(AveBMI ~ AvePM + MedHInc + PerBlack + PerLatinx + PerAsianAm + 
+     MedHVal + LTHS + FemaleUnemp + MaleUnemp + ClimateRegion, data = df.complete))
+
+# 6c Compare coefficient estimates
+
+mod.NoMiss$coefficients[2:6,1]
+mod.MImput.Conf.PooledCoeff[2:6,2]
+
+# 6c Compare standard errors 
+
+mod.NoMiss$coefficients[2:6,2]
+mod.MImput.Conf.PooledCoeff[2:6,3]
+
+##** Class Question **##
+# Are the estimates of the two models similar? 
+# What about uncertainty?
+##*****************************************************************##
+
+
+```
+
