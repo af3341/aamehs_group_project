@@ -1,0 +1,489 @@
+---
+title: "PCA / FA"
+author: "Christine Lucille Kuryla"
+date: "2024-04-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(foreign)
+library(dplyr)
+library(mgcv)
+
+# 0b Load packages
+
+# analysis packages
+library(psych)
+library(factoextra)
+# data wranging packages
+library(tidyverse)
+library(dplyr)
+library(janitor)
+library(lubridate)
+# visualization packages
+library(ggplot2)
+library(ggcorrplot)
+library(ggfortify)  
+library(gridExtra)
+library(GPArotation)
+library(ggrepel)
+library(pals)
+library(GGally)
+
+```
+
+# Load and Clean Data
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+
+library(tidyverse)
+library(broom)
+library(dplyr)
+### Reading in Relevant NHANES 2017-2018 Data
+#NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
+#weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
+
+# phthalates and plasticizers metabolites - urine 
+# codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
+phthte_urine =
+  read.xport("data/PHTHTE_J.XPT") %>% 
+  janitor::clean_names()
+
+# urine creatinine levels 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/ALB_CR_J.htm
+creatinine_urine =
+  read.xport("data/ALB_CR_J.XPT") %>% 
+  janitor::clean_names()
+
+# Alpha-1-Acid Glycoprotein - Serum
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SSAGP_J.htm
+agp_serum =
+  read.xport("data/SSAGP_J.XPT") %>% 
+  janitor::clean_names()
+
+# Demographic variables and sample weights 
+# codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.htm
+demo =
+  read.xport("data/DEMO_J.XPT") |> 
+  janitor::clean_names()
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Cleaning Variable Names of Phthalate Urine Data 
+
+phthte_urine =
+  phthte_urine %>% 
+  rename(weights = wtsb2yr) %>%
+  rename_with(~ gsub("^urx", "", .), starts_with("urx")) %>% 
+  filter(!weights == "0")
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Adjusting Phthalate Urine Data for Creatinine
+
+# merging Phthalate urine data with urinary creatinine levels and then adjusting concentrations for creatinine
+# dropping albumin from creatinine dataset
+creatinine_urine =
+  creatinine_urine %>% 
+  select(seqn, urxucr, urducrlc) #dropping urxcrs bc i dont want creatinine expressed in those units
+#7936 obs
+
+#merging creatinine data with phthalate data
+phthte_creatinine =
+  merge(creatinine_urine, phthte_urine, by = "seqn") %>%
+  select(!starts_with("urd")) %>% #dropped <LOD columns for ease of pivoting
+  pivot_longer(cols = cnp:mzp,  
+               names_to = "analyte_code",
+               values_to = "reported_result") #pivoted longer so that i can map in the next step
+
+#54169 obs 
+
+#urinary [phth] in ng/mL
+# urinary [creatinine] in mg/dL so need to get this to ng/mL
+
+# Urinary creatinine concentrations, specific gravity, and osmolality are common methods for adjusting dilution. The most widely used method is creatinine adjustment that involves dividing the analyte concentration by the creatinine concentration. Analyte results are then reported as weight of analyte per gram of creatinine (micrograms analyte per gram creatinine).
+
+# making a new column with creatinine-adjusted [phthalate]
+phthte_creatinine =
+  phthte_creatinine %>% 
+  mutate(ng_per_ml_creatinine = urxucr*10000) %>% #here converting mg/dL to ng/mL--> 1mg/dL = 10,000ng/mL
+  mutate(adj_conc = reported_result/ng_per_ml_creatinine)
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Cleaning Variable Names of Demographic Data
+
+# drop unneeded variables from dataset 
+demo <- subset(demo, select = -c(sddsrvyr, ridstatr, ridexprg, dmdmartl, dmdeduc2, dmqmiliz, dmqadfc, dmdhrgnd, dmdhragz, dmdhredz, dmdhrmaz, dmdhsedz))
+
+demo <- demo |> 
+  rename(gender = riagendr, 
+         age_yrs_screen = ridageyr, 
+         age_mon_screen = ridagemn, 
+         race_ethn1 = ridreth1,
+         race_ethn3 = ridreth3, 
+         time_period = ridexmon, 
+         age_mon_screen = ridagemn,
+         age_mon_exam = ridexagm, 
+         birth_country = dmdborn4, 
+         citizenship = dmdcitzn,
+         years_us = dmdyrsus, 
+         education = dmdeduc3, 
+         lang_pers_quest = sialang, 
+         proxy_pers_quest = siaproxy, 
+         interpret_pers_quest = siaintrp, 
+         lang_fam_interview = fialang, 
+         proxy_fam_interview = fiaproxy, 
+         interpret_fam_interview = fiaintrp,
+         lang_capi = mialang, 
+         proxy_capi = miaproxy, 
+         interpret_capi = miaintrp, 
+         lang_acasi = aialanga, 
+         hh_size = dmdhhsiz, 
+         fam_size = dmdfmsiz, 
+         hh_young_children = dmdhhsza,
+         hh_children = dmdhhszb, 
+         hh_adults = dmdhhsze, 
+         weight_2yr_intervew = wtint2yr,
+         weight_2yr_mec = wtmec2yr, 
+         variance_psu = sdmvpsu, 
+         variance_stratum = sdmvstra, 
+         income_hh_annual = indhhin2, 
+         income_family_annual = indfmin2, 
+         income_poverty_ratio = indfmpir)
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+# Subsetting Demographic Data to Ages 3-16 
+
+demo <- demo |> 
+  filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
+```
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+#Joining demographic, phthalate, and agp data
+
+#making phthalate adjusted with creatinine dataset wide so can join with demo data
+wide_phth_creat =
+  phthte_creatinine %>%
+  select(-reported_result, -ng_per_ml_creatinine) %>% 
+  pivot_wider(names_from = "analyte_code",
+              values_from = "adj_conc") %>% 
+  filter(!rowSums(is.na(select(., cnp:mzp))) == ncol(select(., cnp:mzp))) #2851 to 2762
+#noticed that participant #93739, 93771, has no data for any of the pththalate metabolites, even in phthte_urine dataset, so should drop them from further analysis?
+# there are many participants with no values for any of them , even in phthte_urine dataset 
+# went back to checkin_feb_20_deliverable to get rid of them there 
+
+
+all_data =
+  inner_join(demo, wide_phth_creat, by = "seqn") #915 people with demo and phthalate data
+
+
+exp_outcome =
+  inner_join(wide_phth_creat, agp_serum, by = "seqn") %>% 
+  filter(!is.na(ssagp)) #662 participants that provided agp samples and have phthalate data for 
+  
+summary(exp_outcome)
+(292/954)*100
+
+```
+
+# PCA Prep
+
+```{r pca}
+
+phth_data <- wide_phth_creat %>% 
+  column_to_rownames(var = "seqn") %>% 
+  select(-c("urxucr", "weights"))
+
+# 1k Correlation of constituents 
+
+ggcorr(phth_data, labs.title = "Correlations")
+
+pca <- prcomp(phth_data, scale. = TRUE)
+
+
+####
+
+fviz_eig(pca, main = "Percent Variance Explained \n by Principal Component",
+         xlab = "Principal Component",
+         ylim = c(0,70)) 
+
+###
+
+
+# 3b Visualization of the loadings 
+# Loadings are the weights that each original variable contributes to a PC
+
+# 3b.i Extract the rotation or loadings matrix 
+
+loadings.constituent <- as.data.frame.matrix(pca$rotation) 
+
+# 3b.ii Create column with names of constituents
+
+loadings.constituent$Constituent <- row.names(loadings.constituent)
+
+# 3b.iii Put loading data in long format 
+
+loadings.long <- loadings.constituent %>% 
+  gather(key = "PC", value = "Loading", -Constituent) 
+
+# 3b.iv Plot just 2 Principal Components
+
+loadings.long.2PC <- loadings.long %>% 
+  filter(PC %in% c("PC1", "PC2")) 
+
+# choose color palette
+Color.list <- stepped(20)
+
+# make plot 
+ggplot(loadings.long.2PC, aes(x = Constituent, y = Loading)) + 
+  geom_col(aes(color = Constituent, fill= Constituent)) +  # creates a column for each loading
+  geom_hline(yintercept = 0, size = 0.2) + # creates a line at 0
+  facet_wrap(. ~ PC) +                       # creates a distinct box for each PC 
+  theme_bw() +                             # sets theme options
+  theme(strip.background = element_rect(fill = "white")) +
+  labs(x = expression("PM"[2.5]~"Constituents"),
+       y = "Loadings") + 
+  scale_color_manual(values = Color.list) +
+  scale_fill_manual(values = Color.list) 
+
+##** Class Question **##
+# Which elements have the biggest positive loadings for PC2? 
+# What does it mean that elements X and Y have positive loadings, 
+#      Whereas elements P and Q have negative loadings? 
+# What would it mean if a day had a score of 5 for PC1? (all other scores = 0)
+# What would it mean if a day had a score of -5 for PC1? (all other scores = 0)
+##*****************************************************************## 
+
+# 3b.v Choose just the first 7 principal components 
+
+loadings.long.7PC <- loadings.long %>% 
+  filter(PC %in% c("PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7")) 
+
+# 3b.vi Plot 7 principal components 
+
+Color.list <- stepped(20) 
+
+ggplot(loadings.long.7PC, aes(x = Constituent, y = Loading)) + 
+  geom_col(aes(color = Constituent, fill= Constituent)) +   # creates a column for each loading
+  geom_hline(yintercept = 0, size = 0.2) + # creates a line at 0
+  facet_wrap(~ PC) +                       # creates a distinct box for each PC 
+  theme_bw() +                             # sets theme options
+  theme(strip.background = element_rect(fill = "white")) +
+  labs(x = expression("PM"[2.5]~"Constituents"),
+       y = "Loadings") + 
+  scale_color_manual(values = Color.list) +
+  scale_fill_manual(values = Color.list)
+
+##** Class Question **##
+# What are the most important elements for PC7?  
+# Which PC most explain the variability of Mn?
+##*****************************************************************## 
+
+# 3c.i Plot bivariate loadings
+# Creates a plot showing the loadings for principal component 1 and 2. 
+
+autoplot(pca,    # name the pca solution
+         data = phth_data, # name the original data
+         size = 0.8, colour = 'blue', alpha = 0.5,    
+         loadings = FALSE, loadings.colour = 'orange',  
+         loadings.label = TRUE, loadings.label.repel = T, 
+         loadings.label.size = 2.5, loadings.label.colour = 'black',
+         main = "Principal Component Analysis Loading Plot")
+
+# 3c.ii ggplot version 
+
+# ggplot(loadings, aes(x = PC1, y = PC2)) + 
+#   geom_point() +
+#   geom_label_repel(aes(label = Constituent),
+#                    box.padding   = 0.35,
+#                    point.padding = 0.5,
+#                    segment.color = 'grey50') + 
+#   theme_bw() + 
+#   theme(legend.position = "bottom") +
+#   labs(title = "Variable Loadings on First and Second Factors")
+
+###***********************************************
+#### 4: Create Exposure Matrix of PCA Scores #####
+####**********************************************
+
+# Each day has a score for each principal component, 
+# which is computed from the concentrations of constituents
+# the score can be thought of as how much of that component
+# was observed on that day 
+# x is a matrix of the scores in the pca solution from prcomp
+
+# we can combine the date variable and
+# the scores of the first 7 principal components 
+# to create a new exposure matrix 
+# that we could then use in an epidemiological analysis 
+# where the principal components are continuous variables
+
+# 4a Extract pca scores 
+
+scores.constituent <- as.data.frame(pca$x)
+
+# 4b Choose just the first 7 principal components 
+
+scores.constituent <- scores.constituent %>% 
+  select(PC1, PC2, PC3, PC4, PC5, PC6, PC7)
+
+# 4c Add the dates from the original data 
+
+scores.constituent$Date <- df0$Date
+
+# 4d View dataframe 
+
+head(scores.constituent)
+
+##** Class Question **##
+# What does the column for PC1 mean?
+# What do we expect to be the correlation between PC1 and PC2? 
+##*****************************************************************## 
+
+# 4e Compute correlations
+
+cor(scores.constituent$PC1, scores.constituent$PC2)
+cor(scores.constituent$PC1, scores.constituent$PC3)
+cor(scores.constituent$PC1, scores.constituent$PC5)
+
+
+# 4f Visualize correlations
+scores.constituent1 <- scores.constituent %>% select(-Date)
+
+ggcorr(scores.constituent1)
+
+####*************************************
+#### B: Exploratory Factor Analysis #####
+
+
+```
+
+
+```{r}
+
+
+# PC1 Main Contributers
+loadings.constituent %>% 
+  filter(PC1 > 0.3) %>% 
+  arrange(desc(PC1)) %>% 
+  select("PC1")
+# PC1: moh, mhh, ecp, mhp
+
+# PC2 Main Contributers
+loadings.constituent %>% 
+  filter(PC2 > 0.2) %>% 
+  arrange(desc(PC2)) %>% 
+  select("PC2")
+# PC2: monp, cop, mnp, ecpt,..., cnp, mhht
+
+# PC2 Main Contributers
+loadings.constituent %>% 
+  filter(PC2 > 0.2) %>% 
+  arrange(desc(PC2)) %>% 
+  select("PC2")
+# PC2: monp, cop, mnp, ecpt,..., cnp, mhht
+
+# PC3 Main Contributers
+loadings.constituent %>% 
+  filter(PC3 > 0.4) %>% 
+  arrange(desc(PC3)) %>% 
+  select("PC3")
+# PC3: mbp, mhbp, mib, hibp
+
+# PC4 Main Contributers
+loadings.constituent %>% 
+  filter(PC4 < -0.15) %>% 
+  arrange(desc(abs(PC4))) %>% 
+  select("PC4")
+# Negative!
+# PC4: mhnc, mcoh, .., mhht, ecpt
+
+# PC5 is weird
+
+# PC6 Main Contributers
+loadings.constituent %>% 
+  filter(PC6 > 0.2) %>% 
+  arrange(desc(abs(PC6))) %>% 
+  select("PC6")
+# PC6: mhht, ecpt, mhbp, mbp
+
+# PC7
+# mainly mep, also mc1
+
+# PC8
+# mainly mc1, also mep
+
+```
+
+```{r}
+
+pca_scaled <- princomp(phth_data)
+pca_scaled <- pca
+
+#pca_scaled <- princomp(summary_scaled)
+summary(pca_scaled)
+loadings(pca_scaled)
+ls(pca_scaled)
+screeplot(pca_scaled)
+library(broom)
+
+dim(pca_scaled$scores)
+dim(combined_summary %>% na.omit())
+
+scores_df <- cbind(combined_summary %>% na.omit(), pca_scaled$scores)
+
+scores_df <- pca$x
+
+data_long <- pivot_longer(as.data.frame(scores_df), cols = starts_with("PC"), names_to = "Component", values_to = "Value") %>% 
+  filter(Component %in% c("PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7", "PC8"))
+
+
+
+
+# Merge annotations back with data for plotting
+data_long <- left_join(data_long, annotations, by = "Component")
+
+
+
+library(tidyr)
+
+
+pca_scaled$loadings
+summary(pca_scaled)[1]
+
+# Get vector of proportion of variance for each PC for the plot
+variances <- pca_scaled$sdev^2
+total_variance <- sum(variances)
+proportion_variance_explained <- variances / total_variance
+
+# make df for pca heatmap
+loadings_df <- pca_scaled$loadings[,1:8]
+
+loadings_df <- pca$rotation[,1:8]
+colnames(loadings_df) <- c(paste0("PC1: ", round(proportion_variance_explained[1] * 100, 2), "%"),
+                           paste0("PC2: ", round(proportion_variance_explained[2] * 100, 2), "%"),
+                           paste0("PC3: ", round(proportion_variance_explained[3] * 100, 2), "%"),
+                           paste0("PC4: ", round(proportion_variance_explained[4] * 100, 2), "%"),
+                           paste0("PC5: ", round(proportion_variance_explained[5] * 100, 2), "%"),
+                           paste0("PC6: ", round(proportion_variance_explained[6] * 100, 2), "%"),
+                           paste0("PC7: ", round(proportion_variance_explained[7] * 100, 2), "%"),
+                           paste0("PC8: ", round(proportion_variance_explained[8] * 100, 2), "%")
+                          )
+
+
+library(pheatmap)
+pheatmap(loadings_df, cluster_rows = TRUE, cluster_cols = FALSE,
+         display_numbers = TRUE,
+         main = "PC Loadings")
+
+
+
+
+
+```
+
