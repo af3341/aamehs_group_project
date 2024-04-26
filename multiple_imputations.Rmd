@@ -201,9 +201,19 @@ all_data =
   inner_join(demo, wide_phth_creat, by = "seqn") #915 people with demo and phthalate data
 
 
-exp_outcome =
-  inner_join(wide_phth_creat, agp_serum, by = "seqn") %>% 
-  filter(!is.na(ssagp)) #662 participants that provided agp samples and have phthalate data for 
+all_data_with_outcome <- all_data %>% 
+  inner_join(agp_serum, all_data, by = "seqn")
+
+
+
+#exp_outcome <- inner_join(agp_serum, wide_phth_creat, by = "seqn")
+
+exp_outcome <- inner_join(agp_serum, wide_phth_creat, by = "seqn") %>% 
+  filter(!is.na(ssagp))
+
+# exp_outcome =
+#   inner_join(wide_phth_creat, agp_serum, by = "seqn") %>% 
+#   filter(!is.na(ssagp)) #662 participants that provided agp samples and have phthalate data for 
   
 summary(exp_outcome)
 (292/954)*100
@@ -224,12 +234,13 @@ all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |>
          eth_white = case_when(race_ethn3 == 3 ~ 1, TRUE ~ 0),
          eth_black = case_when(race_ethn3 == 4 ~ 1, TRUE ~ 0),
          eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
-         eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
+         eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) %>% 
+  select(-ucr)
 
 sum(exp_outcome$seqn %in% all_data$seqn)
 
 # All of the covariates, exposure, and outcome data
-all_var <- inner_join(exp_outcome, all_data, by = "seqn") |> 
+all_var <- all_data_with_outcome |> 
   mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
   mutate(eth_mex = case_when(race_ethn3 == 1 ~ 1, TRUE ~ 0),
          eth_hisp_oth = case_when(race_ethn3 == 2 ~ 1, TRUE ~ 0),
@@ -277,8 +288,9 @@ options(scipen=999)
 
 #df.Conf.miss <- read_csv(paste0(ProjectFolder, "county_bmi_miss_confounders.csv"))
 
-df.Conf.miss <- all_var
-#df.Conf.miss <- all_exp_outcome
+#df.Conf.miss <- all_var # this won't run
+df.Conf.miss <- all_exp_outcome %>% 
+  select(-c("seqn", "wtssgp2y", "urxucr", "weights"))
 
 # 1b Review data
 
@@ -297,11 +309,31 @@ sum(is.na(df.Conf.miss$age_yrs_screen))
 sum(is.na(df.Conf.miss$race_ethn1))
 sum(is.na(df.Conf.miss$race_ethn3))
 sum(is.na(df.Conf.miss$income_family_annual))
+sum(is.na(df.Conf.miss$cnp))
+sum(is.na(df.Conf.miss$cop))
+sum(is.na(df.Conf.miss$ecp))
+sum(is.na(df.Conf.miss$ecpt))
+sum(is.na(df.Conf.miss$hibp))
+sum(is.na(df.Conf.miss$mbp))
+sum(is.na(df.Conf.miss$mc1))
+sum(is.na(df.Conf.miss$mcoh))
+sum(is.na(df.Conf.miss$mep))
+sum(is.na(df.Conf.miss$mhbp))
+sum(is.na(df.Conf.miss$mhh))
+sum(is.na(df.Conf.miss$mhht))
+sum(is.na(df.Conf.miss$mhnc))
+sum(is.na(df.Conf.miss$mhp))
+sum(is.na(df.Conf.miss$mib))
+sum(is.na(df.Conf.miss$mnp))
+sum(is.na(df.Conf.miss$moh))
+sum(is.na(df.Conf.miss$monp))
+sum(is.na(df.Conf.miss$mzp))
+
 
 # 2b Review pattern of missingness
 
 # We will isolate just the variables with missing data so it is easier to see them 
-df.miss.vars <- df.Conf.miss %>% select(income_family_annual)
+df.miss.vars <- df.Conf.miss %>% select(c("monp", "mzp"))
 
 # 2b.i Visualize with VIM package 
 
@@ -314,10 +346,6 @@ aggr_plot <- aggr(df.miss.vars,
                   gap=3, 
                   ylab=c("Histogram of missing data","Pattern"))
 
-##** Class Question **##
-# Which variable has the most missing data? 
-# What is the most common missing pattern? 
-##*****************************************************************##
 
 # 2b.ii Visualize with mice package
 
@@ -339,6 +367,14 @@ aggr_plot <- aggr(df.miss.vars,
 ####*****************************
 #### A3: Impute Missing Data ####
 ####*****************************
+
+
+df.Conf.miss_original <- df.Conf.miss
+
+# df.Conf.miss_selected <- df.Conf.miss %>%
+#   select(ssagp, age_yrs_screen, cnp:eth_nonhispanic_multirace)
+# 
+# df.Conf.miss <- df.Conf.miss_selected
 
 # 3a Create imputed datasets
 
@@ -366,7 +402,7 @@ MImput.df.Conf <- mice(df.Conf.miss,     # dataset
 MImput.df.Conf <- mice(df.Conf.miss, m = 5, maxit = 50, meth = 'pmm', seed = 500)
 
 
-MImput.df.Conf <- mice(df.Conf.miss %>% select(-c("years_us", "education")),     # dataset
+MImput.df.Conf <- mice(df.Conf.miss,     # dataset
               m = 5,        # number of imputed datasets to create
               maxit = 50,   # number of iterations to create prediction models 
               meth = 'pmm', # method for imputation- depends on the class of missing variables
@@ -383,7 +419,7 @@ summary(MImput.df.Conf)
 
 # 3c Review imputed values for a single variable 
 
-MImput.df.Conf$imp$income_family_annual
+MImput.df.Conf$imp$mhp
 
 
 # 3d Compare density plot of imputed data versus original data 
@@ -391,12 +427,11 @@ MImput.df.Conf$imp$income_family_annual
 densityplot(MImput.df.Conf)
 
 
-# all_exp_outcome has our original unimputed data
-
 
 ####***********************************
 #### A4: Fit Model on Imputed Data ####
 ####***********************************
+
 
 # 4A Fit models
 
@@ -414,9 +449,6 @@ mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ mhp + gender + age_yrs_screen
 
 pool(mod.MImput.Conf)
 
-##** Class Question **##
-# What are the 2 sources of variance when we use multiple imputation? 
-##*****************************************************************##
 
 # ubar = average within-imputation variance (sample variance)
 # b = between-imputation variance
@@ -425,22 +457,15 @@ pool(mod.MImput.Conf)
 # lambda = proportion of variance due to missingness 
 # fmi = fraction of missing information
 
-# Let us look at just PM2.5 
+# Let us look at just the metabolite
 pool(mod.MImput.Conf)[2,]
-
-##** Class Question **##
-# For the estimate of Beta for PM2.5, 
-# which is greater: 
-# variance within-imputation variance 
-# or between-imputation variance? 
-##*****************************************************************##
 
 # we can directly compute the standard error of Beta 
 # from the two sources of variance
 # Var = se^2
 # se = sqrt(ubar + ((m+ 1)/m)* b))
 
-sqrt(0.0007955 + ((5 + 1)/5) * 0.000000335992)
+#sqrt(0.0007955 + ((5 + 1)/5) * 0.000000335992)
 
 # 5b Model summary II 
 # summary() will compute the standard error for us
@@ -454,12 +479,11 @@ mod.MImput.Conf.PooledCoeff[2,]
 
 # 6a Readin original, complete data 
 
-df.complete <- read_csv(paste0(ProjectFolder, "county_bmi_pm_confounders_10.csv"))
+#df.complete <- read_csv(paste0(ProjectFolder, "county_bmi_pm_confounders_10.csv"))
 
 # 6b Create model with original data
 
-mod.NoMiss <- summary(lm(AveBMI ~ AvePM + MedHInc + PerBlack + PerLatinx + PerAsianAm + 
-     MedHVal + LTHS + FemaleUnemp + MaleUnemp + ClimateRegion, data = df.complete))
+mod.NoMiss <- summary(lm(ssagp ~ mhp + gender + age_yrs_screen + race_ethn1 + race_ethn3 + income_family_annual), data = df.Conf.miss %>% na.omit())
 
 # 6c Compare coefficient estimates
 
@@ -470,11 +494,6 @@ mod.MImput.Conf.PooledCoeff[2:6,2]
 
 mod.NoMiss$coefficients[2:6,2]
 mod.MImput.Conf.PooledCoeff[2:6,3]
-
-##** Class Question **##
-# Are the estimates of the two models similar? 
-# What about uncertainty?
-##*****************************************************************##
 
 
 ```
