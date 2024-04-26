@@ -23,6 +23,7 @@ library(tidyverse)
 library(foreign)
 library(dplyr)
 library(mgcv)
+
 ### Reading in Relevant NHANES 2017-2018 Data
 #NOTE: phthalate and AGP data have special sample weights we need to account for in analysis
 #weighting module: https://wwwn.cdc.gov/nchs/nhanes/tutorials/Weighting.aspx
@@ -74,8 +75,43 @@ creatinine_urine =
 
 #merging creatinine data with phthalate data
 phthte_creatinine =
-  merge(creatinine_urine, phthte_urine, by = "seqn") %>%
-  select(!starts_with("urd")) %>% #dropped <LOD columns for ease of pivoting
+  merge(creatinine_urine, phthte_urine, by = "seqn") 
+
+# Changing the <LODs to NA
+
+
+# Get the metabolite columns and their corresponding lc columns using regex
+#cols <- colnames(phthte_creatinine)
+# pattern <- "^urd(.*)lc$"
+# lc_columns <- cols[grepl(pattern, cols)]
+# metabolites <- sub(pattern, "\\1", lc_columns)
+
+lc_columns <- c("urducrlc", "urdcnplc", "urdcoplc", "urdecplc", "urdepclc", "urdhiblc", "urdmbplc", "urdmc1lc", "urdmcolc", "urdmeplc", "urdmhblc", "urdmhhlc", "urdmhtlc", "urdmchlc", "urdmhplc", "urdmiblc", "urdmnplc", "urdmohlc", "urdmonlc", "urdmzplc")
+metabolites <- c("ucr", "cnp", "cop", "ecp", "ecpt", "hibp", "mbp", "mc1", "mcoh", "mep", "mhbp", "mhh", "mhht", "mhnc", "mhp", "mib", "mnp", "moh", "monp", "mzp")
+
+# Function to apply NA where lc column indicates below detection limit
+apply_detection_limit <- function(df, met, lc) {
+  df[[met]][df[[lc]] == 1] <- NA
+  df
+}
+
+# Loop through the metabolites and their corresponding lc columns to apply the function
+for (i in seq_along(metabolites)) {
+  phthte_creatinine <- apply_detection_limit(phthte_creatinine, metabolites[i], lc_columns[i])
+}
+
+
+# Remove the lc columns from the dataframe
+phthte_creatinine <- phthte_creatinine %>% select(-matches("lc$"))
+
+
+
+
+#%>%
+#  select(!starts_with("urd")) %>% #dropped <LOD columns for ease of pivoting
+  
+  
+phthte_creatinine = phthte_creatinine %>% 
   pivot_longer(cols = cnp:mzp,  
                names_to = "analyte_code",
                values_to = "reported_result") #pivoted longer so that i can map in the next step
@@ -93,6 +129,8 @@ phthte_creatinine =
   mutate(ng_per_ml_creatinine = urxucr*10000) %>% #here converting mg/dL to ng/mL--> 1mg/dL = 10,000ng/mL
   mutate(adj_conc = reported_result/ng_per_ml_creatinine)
 ```
+
+
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
 # Cleaning Variable Names of Demographic Data
@@ -311,13 +349,22 @@ MImput.df.Conf <- mice(df.Conf.miss,     # dataset
                             # pmm usually performs best for continuous variables
               seed = 500)   # our seed
 
-# education and year_us are linearly dependent so need to remove one of them 
+# education and year_us are linearly dependent so need to remove one of them
 # all(df.Conf.miss$education == df.Conf.miss$years_us)
 # 
 # library(caret)
 # nzv <- nearZeroVar(df.Conf.miss)
 # colnames(df.Conf.miss)[nzv]
 # df.Conf.miss <- df.Conf.miss[, -nzv]
+# 
+# # Check for high correlation
+# cor_matrix <- cor(df.Conf.miss, use = "complete.obs")  # using complete cases for correlation
+# high_cor <- findCorrelation(cor_matrix, cutoff = 0.9)  # identify highly correlated variables
+# df.Conf.miss <- df.Conf.miss[, -high_cor]              # remove highly correlated variables
+
+# Re-run mice
+MImput.df.Conf <- mice(df.Conf.miss, m = 5, maxit = 50, meth = 'pmm', seed = 500)
+
 
 MImput.df.Conf <- mice(df.Conf.miss %>% select(-c("years_us", "education")),     # dataset
               m = 5,        # number of imputed datasets to create
