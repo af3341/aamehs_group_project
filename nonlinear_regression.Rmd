@@ -18,6 +18,7 @@ library(foreign)
 library(dplyr)
 library(mgcv)
 library(splines)
+library(gridExtra)
 ```
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
@@ -503,7 +504,8 @@ mzp_s <- ggplot(pred_mzp_df, aes(x =mzp, y = pred_agp)) +
 
 ```{r}
 #Combine all plots
-gridExtra::grid.arrange(ecpt_s, mcoh_s, mep_s, mhht_s, mib_s, mhnc_s, mhh_s, mzp_s, ncol = 3, top = "Non-linear models of metabolite exposure-response curves with penalized splines")
+combined_plots_splines <- grid.arrange(ecpt_s, mcoh_s, mep_s, mhht_s, mib_s, mhnc_s, mhh_s, mzp_s, ncol = 3, top = "Non-Linear Models of Metabolite Exposure-Response Curves with Penalized Splines")
+
 ```
 
 
@@ -653,8 +655,6 @@ ggplot(predagp.moh.ns, aes(ssagp)) +
 lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(lin_covari_model)
-
-all_exp_outcome <- all_exp_outcome[all_exp_outcome$cnp <= 1e-04, ]
 ```
 
 
@@ -679,7 +679,7 @@ mcoh_model <- lm(ssagp ~ mcoh + gender_female + age_yrs_screen + income_family_a
 
 mep_model <- lm(ssagp ~ mep + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
-mhpb_model <- lm(ssagp ~ mhbp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+mhbp_model <- lm(ssagp ~ mhbp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 mhh_model <- lm(ssagp ~ mhh + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
@@ -700,8 +700,12 @@ monp_model <- lm(ssagp ~ monp + gender_female + age_yrs_screen + income_family_a
 mzp_model <- lm(ssagp ~ mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(mzp_model)
+```
 
-# Example linear plot for cnp 
+## Linear plots 
+
+```{r}
+# cnp
 
 data_cnp <- data.frame(
   cnp = all_exp_outcome$cnp,
@@ -716,17 +720,506 @@ data_cnp <- data.frame(
 data_cnp$predicted_ssagp <- predict(cnp_model, newdata = data_cnp)
 
 # Plot relationship between cnp and ssagp after accounting for other predictors
-ggplot(data_cnp, aes(x = cnp, y = ssagp)) +
+cnp_l <- ggplot(data_cnp, aes(x = cnp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "CNP", y = "SSAGP", title = "CNP and SSAGP")
+  labs(x = "CNP (ug/L)", y = "AGP (mg/mL)", title = "CNP") + 
+  theme_classic()
+```
 
+```{r}
+# cnp
+
+data_cop <- data.frame(
+  cop = all_exp_outcome$cop,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_cop$predicted_ssagp <- predict(cop_model, newdata = data_cop)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+cop_l <- ggplot(data_cop, aes(x = cop, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "COP (ug/L)", y = "AGP (mg/mL)", title = "COP") + 
+  theme_classic()
+```
+
+```{r}
+# ecp
+
+data_ecp <- data.frame(
+  ecp = all_exp_outcome$ecp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_ecp$predicted_ssagp <- predict(ecp_model, newdata = data_ecp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+ecp_l <- ggplot(data_ecp, aes(x = ecp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "ECP (ug/L)", y = "AGP (mg/mL)", title = "ECP") + 
+  theme_classic()
 ```
 
 
-# PCA Attempt (will add FA)
+```{r}
+# ecpt
 
-```{r pca, echo=FALSE}
+data_ecpt <- data.frame(
+  ecpt = all_exp_outcome$ecpt,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_ecpt$predicted_ssagp <- predict(ecpt_model, newdata = data_ecpt)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+ecpt_l <- ggplot(data_ecpt, aes(x = ecpt, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "ECPT (ug/L)", y = "AGP (mg/mL)", title = "ECPT") + 
+  theme_classic()
+```
+
+```{r}
+# ecpt
+
+data_hibp <- data.frame(
+  hibp = all_exp_outcome$hibp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_hibp$predicted_ssagp <- predict(hibp_model, newdata = data_hibp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+hibp_l <- ggplot(data_hibp, aes(x = hibp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "HIBP (ug/L)", y = "AGP (mg/mL)", title = "HIBP") + 
+  theme_classic()
+```
+
+```{r}
+# ecpt
+
+
+data_mbp <- data.frame(
+  mbp = all_exp_outcome$mbp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mbp$predicted_ssagp <- predict(mbp_model, newdata = data_mbp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mbp_l <- ggplot(data_mbp, aes(x = mbp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MBP (ug/L)", y = "AGP (mg/mL)", title = "MBP") + 
+  theme_classic()
+```
+
+
+```{r}
+# hibp
+
+
+data_hibp <- data.frame(
+  hibp = all_exp_outcome$hibp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_hibp$predicted_ssagp <- predict(hibp_model, newdata = data_hibp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+hibp_l <- ggplot(data_hibp, aes(x = hibp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "HIBP (ug/L)", y = "AGP (mg/mL)", title = "HIBP") + 
+  theme_classic()
+```
+
+```{r}
+# mbp
+
+data_mbp <- data.frame(
+  mbp = all_exp_outcome$mbp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mbp$predicted_ssagp <- predict(mbp_model, newdata = data_mbp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mbp_l <- ggplot(data_mbp, aes(x = mbp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MBP (ug/L)", y = "AGP (mg/mL)", title = "MBP") + 
+  theme_classic()
+```
+
+```{r}
+# mc1
+
+data_mc1 <- data.frame(
+  mc1 = all_exp_outcome$mc1,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mc1$predicted_ssagp <- predict(mc1_model, newdata = data_mc1)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mc1_l <- ggplot(data_mc1, aes(x = mc1, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MC1 (ug/L)", y = "AGP (mg/mL)", title = "MC1") + 
+  theme_classic()
+```
+
+```{r}
+# mcoh
+
+data_mcoh <- data.frame(
+  mcoh = all_exp_outcome$mcoh,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mcoh$predicted_ssagp <- predict(mcoh_model, newdata = data_mcoh)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mcoh_l <- ggplot(data_mcoh, aes(x = mcoh, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MCOH (ug/L)", y = "AGP (mg/mL)", title = "MCOH") + 
+  theme_classic()
+```
+
+
+```{r}
+# mep
+
+data_mep <- data.frame(
+  mep = all_exp_outcome$mep,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mep$predicted_ssagp <- predict(mep_model, newdata = data_mep)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mep_l <- ggplot(data_mep, aes(x = mep, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MEP (ug/L)", y = "AGP (mg/mL)", title = "MEP") + 
+  theme_classic()
+```
+
+
+```{r}
+# mhbp
+
+data_mhbp <- data.frame(
+  mhbp = all_exp_outcome$mhbp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mhbp$predicted_ssagp <- predict(mhbp_model, newdata = data_mhbp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mhbp_l <- ggplot(data_mhbp, aes(x = mhbp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MHBP (ug/L)", y = "AGP (mg/mL)", title = "MHBP") + 
+  theme_classic()
+```
+
+```{r}
+# mhh
+
+data_mhh <- data.frame(
+  mhh = all_exp_outcome$mhh,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mhh$predicted_ssagp <- predict(mhh_model, newdata = data_mhh)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mhh_l <- ggplot(data_mhh, aes(x = mhh, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MHH (ug/L)", y = "AGP (mg/mL)", title = "MHH") + 
+  theme_classic()
+```
+```{r}
+# mhh
+
+data_mhh <- data.frame(
+  mhh = all_exp_outcome$mhh,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mhh$predicted_ssagp <- predict(mhh_model, newdata = data_mhh)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mhh_l <- ggplot(data_mhh, aes(x = mhh, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MHH (ug/L)", y = "AGP (mg/mL)", title = "MHH") + 
+  theme_classic()
+```
+
+```{r}
+# mhht
+
+data_mhht <- data.frame(
+  mhht = all_exp_outcome$mhht,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mhht$predicted_ssagp <- predict(mhht_model, newdata = data_mhht)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mhht_l <- ggplot(data_mhht, aes(x = mhht, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MHHT (ug/L)", y = "AGP (mg/mL)", title = "MHHT") + 
+  theme_classic()
+```
+
+```{r}
+# mhnc
+
+data_mhnc <- data.frame(
+  mhnc = all_exp_outcome$mhnc,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mhnc$predicted_ssagp <- predict(mhnc_model, newdata = data_mhnc)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mhnc_l <- ggplot(data_mhnc, aes(x = mhnc, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MHNC (ug/L)", y = "AGP (mg/mL)", title = "MHNC") + 
+  theme_classic()
+```
+
+```{r}
+# mhp
+
+data_mhp <- data.frame(
+  mhp = all_exp_outcome$mhp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mhp$predicted_ssagp <- predict(mhp_model, newdata = data_mhp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mhp_l <- ggplot(data_mhp, aes(x = mhp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MHP (ug/L)", y = "AGP (mg/mL)", title = "MHP") + 
+  theme_classic()
+```
+```{r}
+# mib
+
+data_mib <- data.frame(
+  mib = all_exp_outcome$mib,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mib$predicted_ssagp <- predict(mib_model, newdata = data_mib)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mib_l <- ggplot(data_mib, aes(x = mib, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MIB (ug/L)", y = "AGP (mg/mL)", title = "MIB") + 
+  theme_classic()
+```
+
+```{r}
+# mnp
+
+data_mnp <- data.frame(
+  mnp = all_exp_outcome$mnp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mnp$predicted_ssagp <- predict(mnp_model, newdata = data_mnp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mnp_l <- ggplot(data_mnp, aes(x = mnp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MNP (ug/L)", y = "AGP (mg/mL)", title = "MNP") + 
+  theme_classic()
+```
+```{r}
+# moh
+
+data_moh <- data.frame(
+  moh = all_exp_outcome$moh,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_moh$predicted_ssagp <- predict(moh_model, newdata = data_moh)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+moh_l <- ggplot(data_moh, aes(x = moh, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MOH (ug/L)", y = "AGP (mg/mL)", title = "MOH") + 
+  theme_classic()
+```
+
+```{r}
+# monp
+
+data_monp <- data.frame(
+  monp = all_exp_outcome$monp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_monp$predicted_ssagp <- predict(monp_model, newdata = data_monp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+monp_l <- ggplot(data_monp, aes(x = monp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MONP (ug/L)", y = "AGP (mg/mL)", title = "MONP") + 
+  theme_classic()
+```
+```{r}
+# mzp
+
+data_mzp <- data.frame(
+  mzp = all_exp_outcome$mzp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_mzp$predicted_ssagp <- predict(mzp_model, newdata = data_mzp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+mzp_l <- ggplot(data_mzp, aes(x = mzp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "MZP (ug/L)", y = "AGP (mg/mL)", title = "MZP") + 
+  theme_classic()
+```
+
+```{r message=FALSE, warning=FALSE}
+#Combine all plots
+linear_plots_combined <- grid.arrange(cnp_l, cop_l, ecp_l, ecpt_l, hibp_l, mbp_l, mc1_l, mcoh_l, mep_l, mhbp_l, mhh_l, mhht_l, mhnc_l, mhp_l, mib_l, mnp_l, moh_l, monp_l, mzp_l, ncol = 4, top = "Linear Models of Metabolite Exposure-Response Curves")
+```
+
+
+```{r}
+# PCA Attempt (will add FA)
 
 # PCA first attempt, will improve after PCA/FA class
 
