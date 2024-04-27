@@ -482,7 +482,11 @@ ggplot(pred_mzp_df, aes(x =mzp, y = pred_agp)) +
 
 ```{r Demographic Covariate Model, linear regression, message=FALSE, warning=FALSE}
 #Joining current demographic values we have with the exp_outcome table
-all_exp_outcome = inner_join(exp_outcome, demo, by = "seqn") |> 
+
+demo_new = demo |> 
+  select(seqn, gender, age_yrs_screen, race_ethn1, race_ethn3, income_family_annual)
+
+all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |> 
   mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
   mutate(eth_mex = case_when(race_ethn3 == 1 ~ 1, TRUE ~ 0),
          eth_hisp_oth = case_when(race_ethn3 == 2 ~ 1, TRUE ~ 0),
@@ -493,12 +497,12 @@ all_exp_outcome = inner_join(exp_outcome, demo, by = "seqn") |>
 
 
 #Associations of demo variables alone
-demographic_model = lm(ssagp ~ gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+demographic_model = lm(ssagp ~ gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
 
 summary(demographic_model)
 
 #Adding covariates to simple multiple regression 
-lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
 
 summary(lin_covari_model)
 ```
@@ -507,7 +511,7 @@ Using this initial list of covariates, we do not currently have enough evidence 
 
 **Returning to Total Model with Penalized Splines, adding covariates above**
 ```{r Adding Covariates to Penalized Spline Regression using GAM}
-total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_poverty_ratio + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
 
 summary(total_covari_model)
 #when adjusting for covariates, ecpt, mcoh, mhh, mhht, mib are the six metabolites that have an edf greater than 1
