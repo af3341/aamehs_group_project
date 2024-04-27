@@ -168,318 +168,6 @@ summary(exp_outcome)
 (292/954)*100
 ```
 
-# Non-linear exposure-response curves 
-```{r message=FALSE, warning=FALSE}
-#metabolites: cnp, cop, ecp, ecpt, hipb, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp
-
-#first fit linear model 
-
-lin_model <- lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp, data = exp_outcome)
-
-summary(lin_model)
-
-#fit complete model with penalized splines 
-
-total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp), data = exp_outcome)
-
-summary(total_model)
-#edf not equal to 1 for ecpt, mcoh, mep, mhht, mhnc, mhp, mnp, mzp
-#going to fit GAM models with penalized splines for those 8 metabolites
-```
-
-### Indidual penalized splines for each metabolite with edf > 1 
-
-```{r ecpt model, message=FALSE, warning=FALSE}
-# Fit GAM model for ecpt with penalized spline 
-ecpt_model <- gam(ssagp ~ s(ecpt), data = exp_outcome)
-
-# Generate predictions and standard errors
-pred_ecpt <- predict(ecpt_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_ecpt_df <- data.frame(
-  pred_centered = pred_ecpt$fit,
-  se = pred_ecpt$se.fit,
-  lci_centered = pred_ecpt$fit - 1.96 * pred_ecpt$se.fit,
-  uci_centered = pred_ecpt$fit + 1.96 * pred_ecpt$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_ecpt_df <- cbind(exp_outcome, pred_ecpt_df)|> 
-  mutate(metabolite_model = "ecpt")
-
-# Uncenter data
-pred_ecpt_df$pred_agp <- pred_ecpt_df$pred_centered + mean(exp_outcome$ssagp)
-pred_ecpt_df$lci_agp <- pred_ecpt_df$lci_centered + mean(exp_outcome$ssagp)
-pred_ecpt_df$uci_agp <- pred_ecpt_df$uci_centered + mean(exp_outcome$ssagp)
-
-# Plot
-ggplot(pred_ecpt_df, aes(x = ecpt, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("ecpt (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-ggtitle("Non-linear relationship with penalized splines between ecpt and AGP")
-```
-
-```{r mcoh model, message=FALSE, warning=FALSE, echo = FALSE}
-# Fit GAM model for mcoh with penalized spline 
-mcoh_model <- gam(ssagp ~ s(mcoh), data = exp_outcome)
-
-# Generate predictions and standard errors
-pred_mcoh <- predict(mcoh_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mcoh_df <- data.frame(
-  pred_centered = pred_mcoh$fit,
-  se = pred_mcoh$se.fit,
-  lci_centered = pred_mcoh$fit - 1.96 * pred_mcoh$se.fit,
-  uci_centered = pred_mcoh$fit + 1.96 * pred_mcoh$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_mcoh_df <- cbind(exp_outcome, pred_mcoh_df)|> 
-  mutate(metabolite_model = "mcoh")
-
-# Uncenter data
-pred_mcoh_df$pred_agp <- pred_mcoh_df$pred_centered + mean(exp_outcome$ssagp)
-pred_mcoh_df$lci_agp <- pred_mcoh_df$lci_centered + mean(exp_outcome$ssagp)
-pred_mcoh_df$uci_agp <- pred_mcoh_df$uci_centered + mean(exp_outcome$ssagp)
-
-# Plot
-ggplot(pred_mcoh_df, aes(x = mcoh, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mcoh (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-ggtitle("Non-linear relationship with penalized splines between mcoh and AGP")
-```
-
-```{r mep model, message=FALSE, warning=FALSE, echo = FALSE}
-# Fit GAM model for mep with penalized spline 
-mep_model <- gam(ssagp ~ s(mep), data = exp_outcome)
-
-# Generate predictions and standard errors
-pred_mep <- predict(mep_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mep_df <- data.frame(
-  pred_centered = pred_mep$fit,
-  se = pred_mep$se.fit,
-  lci_centered = pred_mep$fit - 1.96 * pred_mep$se.fit,
-  uci_centered = pred_mep$fit + 1.96 * pred_mep$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_mep_df <- cbind(exp_outcome, pred_mep_df) |> 
-  mutate(metabolite_model = "mep")
-
-# Uncenter data
-pred_mep_df$pred_agp <- pred_mep_df$pred_centered + mean(exp_outcome$ssagp)
-pred_mep_df$lci_agp <- pred_mep_df$lci_centered + mean(exp_outcome$ssagp)
-pred_mep_df$uci_agp <- pred_mep_df$uci_centered + mean(exp_outcome$ssagp)
-
-# Plot
-ggplot(pred_mep_df, aes(x = mep, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mep (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-ggtitle("Non-linear relationship with penalized splines between mep and AGP")
-```
-
-The mhht model below is likely not showing any reportable data due to the increasingly wide confidence interval at higher levels of metabolite concentration
-```{r mhht model, message=FALSE, warning=FALSE, echo = FALSE}
-# Fit GAM model for mhht with penalized spline 
-mhht_model <- gam(ssagp ~ s(mhht), data = exp_outcome)
-
-# Generate predictions and standard errors
-pred_mhht <- predict(mhht_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mhht_df <- data.frame(
-  pred_centered = pred_mhht$fit,
-  se = pred_mhht$se.fit,
-  lci_centered = pred_mhht$fit - 1.96 * pred_mhht$se.fit,
-  uci_centered = pred_mhht$fit + 1.96 * pred_mhht$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_mhht_df <- cbind(exp_outcome, pred_mhht_df) |> 
-  mutate(metabolite_model = "mhht")
-
-# Uncenter data
-pred_mhht_df$pred_agp <- pred_mhht_df$pred_centered + mean(exp_outcome$ssagp)
-pred_mhht_df$lci_agp <- pred_mhht_df$lci_centered + mean(exp_outcome$ssagp)
-pred_mhht_df$uci_agp <- pred_mhht_df$uci_centered + mean(exp_outcome$ssagp)
-
-# Plot
-ggplot(pred_mhht_df, aes(x = mhht, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mhht (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("Non-linear relationship with penalized splines between mhht and AGP")
-```
-
-```{r mhnc model, message=FALSE, warning=FALSE, echo = FALSE}
-# Fit GAM model for mhnc with penalized spline 
-mhnc_model <- gam(ssagp ~ s(mhnc), data = exp_outcome)
-
-# Generate predictions and standard errors
-pred_mhnc <- predict(mhnc_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mhnc_df <- data.frame(
-  pred_centered = pred_mhnc$fit,
-  se = pred_mhnc$se.fit,
-  lci_centered = pred_mhnc$fit - 1.96 * pred_mhnc$se.fit,
-  uci_centered = pred_mhnc$fit + 1.96 * pred_mhnc$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_mhnc_df <- cbind(exp_outcome, pred_mhnc_df)|> 
-  mutate(metabolite_model = "mhnc")
-
-# Uncenter data
-pred_mhnc_df$pred_agp <- pred_mhnc_df$pred_centered + mean(exp_outcome$ssagp)
-pred_mhnc_df$lci_agp <- pred_mhnc_df$lci_centered + mean(exp_outcome$ssagp)
-pred_mhnc_df$uci_agp <- pred_mhnc_df$uci_centered + mean(exp_outcome$ssagp)
-
-# Plot
-ggplot(pred_mhnc_df, aes(x = mhnc, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mhnc (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("Non-linear relationship with penalized splines between mhnc and AGP")
-```
-
-This one also has an extremely wide confidence interval at larger values
-```{r mhp model, message=FALSE, warning=FALSE, echo = FALSE}
-# Fit GAM model for mph with penalized spline 
-mhp_model <- gam(ssagp ~ s(mhp), data = exp_outcome)
-
-# Generate predictions and standard errors
-pred_mhp <- predict(mhp_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mhp_df <- data.frame(
-  pred_centered = pred_mhp$fit,
-  se = pred_mhp$se.fit,
-  lci_centered = pred_mhp$fit - 1.96 * pred_mhp$se.fit,
-  uci_centered = pred_mhp$fit + 1.96 * pred_mhp$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_mhp_df <- cbind(exp_outcome, pred_mhp_df) |> 
-  mutate(metabolite_model = "mhp")
-
-# Uncenter data
-pred_mhp_df$pred_agp <- pred_mhp_df$pred_centered + mean(exp_outcome$ssagp)
-pred_mhp_df$lci_agp <- pred_mhp_df$lci_centered + mean(exp_outcome$ssagp)
-pred_mhp_df$uci_agp <- pred_mhp_df$uci_centered + mean(exp_outcome$ssagp)
-
-# Plot
-ggplot(pred_mhp_df, aes(x =mhp, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mhp (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("Non-linear relationship with penalized splines between mhp and AGP")
-```
-
-```{r mnp model, message=FALSE, warning=FALSE, echo = FALSE}
-# Fit GAM model for mnp with penalized spline 
-mnp_model <- gam(ssagp ~ s(mnp), data = exp_outcome)
-
-# Generate predictions and standard errors
-pred_mnp <- predict(mnp_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mnp_df <- data.frame(
-  pred_centered = pred_mnp$fit,
-  se = pred_mnp$se.fit,
-  lci_centered = pred_mnp$fit - 1.96 * pred_mnp$se.fit,
-  uci_centered = pred_mnp$fit + 1.96 * pred_mnp$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_mnp_df <- cbind(exp_outcome, pred_mnp_df) |> 
-  mutate(metabolite_model = "mnp")
-
-# Uncenter data
-pred_mnp_df$pred_agp <- pred_mnp_df$pred_centered + mean(exp_outcome$ssagp)
-pred_mnp_df$lci_agp <- pred_mnp_df$lci_centered + mean(exp_outcome$ssagp)
-pred_mnp_df$uci_agp <- pred_mnp_df$uci_centered + mean(exp_outcome$ssagp)
-
-# Plot
-ggplot(pred_mnp_df, aes(x =mnp, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mnp (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("Non-linear relationship with penalized splines between mnp and AGP")
-```
-
-Another situation with very wide confidence intervals at higher metabolite concentrations
-```{r mzp model, message=FALSE, warning=FALSE, echo = FALSE}
-# Fit GAM model for mzp with penalized spline 
-mzp_model <- gam(ssagp ~ s(mzp), data = exp_outcome)
-
-# Generate predictions and standard errors
-pred_mzp <- predict(mzp_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mzp_df <- data.frame(
-  pred_centered = pred_mzp$fit,
-  se = pred_mzp$se.fit,
-  lci_centered = pred_mzp$fit - 1.96 * pred_mzp$se.fit,
-  uci_centered = pred_mzp$fit + 1.96 * pred_mzp$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-exp_outcome <- exp_outcome[complete.cases(exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_mzp_df <- cbind(exp_outcome, pred_mzp_df) |> 
-  mutate(metabolite_model = "mzp")
-
-# Uncenter data
-pred_mzp_df$pred_agp <- pred_mzp_df$pred_centered + mean(exp_outcome$ssagp)
-pred_mzp_df$lci_agp <- pred_mzp_df$lci_centered + mean(exp_outcome$ssagp)
-pred_mzp_df$uci_agp <- pred_mzp_df$uci_centered + mean(exp_outcome$ssagp)
-
-# Plot
-ggplot(pred_mzp_df, aes(x =mzp, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mzp (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("Non-linear relationship with penalized splines between mzp and AGP")
-```
-
 ```{r Demographic Covariate Model, linear regression, message=FALSE, warning=FALSE}
 #Joining current demographic values we have with the exp_outcome table
 
@@ -495,39 +183,349 @@ all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |>
          eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
          eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
 
+all_exp_outcome$gender_female <- as.factor(all_exp_outcome$gender_female)
+all_exp_outcome$race_ethn3 <- as.factor(all_exp_outcome$race_ethn3)
 
 #Associations of demo variables alone
-demographic_model = lm(ssagp ~ gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+demographic_model = lm(ssagp ~ gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(demographic_model)
 
 #Adding covariates to simple multiple regression 
-lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(lin_covari_model)
 ```
 
 Using this initial list of covariates, we do not currently have enough evidence to suggest a statistically significant difference in ssagp differing across ethnic groups, gender, or income poverty ratio. Under these adjusted assumptions, both mcoh and mhnc are the metabolites tht have the most significant impact on ssagp.
 
+# Non-linear exposure-response curves 
+```{r message=FALSE, warning=FALSE}
+#metabolites: cnp, cop, ecp, ecpt, hipb, mbp, mc1, mcoh, mep, mhbp, mhh, mhht, mhnc, mhp, mib, mnp, moh, monp, mzp
+
+#first fit linear model 
+
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+summary(lin_covari_model)
+
+#fit complete model with penalized splines 
+
+total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+summary(total_model)
+
+#edf not equal to 1 for ecpt, mcoh, mep, mhh, mhht, mhnc, mib, mzp
+#going to fit GAM models with penalized splines for those 8 metabolites
+```
+
+### Indidual penalized splines for each metabolite with edf > 1 
+
+```{r ecpt model, message=FALSE, warning=FALSE}
+# Fit GAM model for ecpt with penalized spline 
+ecpt_model <- gam(ssagp ~ s(ecpt) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+# Generate predictions and standard errors
+pred_ecpt <- predict(ecpt_model, se.fit = TRUE)
+
+# Create dataframe for predictions and standard errors
+pred_ecpt_df <- data.frame(
+  pred_centered = pred_ecpt$fit,
+  se = pred_ecpt$se.fit,
+  lci_centered = pred_ecpt$fit - 1.96 * pred_ecpt$se.fit,
+  uci_centered = pred_ecpt$fit + 1.96 * pred_ecpt$se.fit
+)
+
+#exclude missing values from original dataset and bind two datasets 
+all_exp_outcome <- all_exp_outcome[complete.cases(all_exp_outcome), ]
+
+# Combine predictions and original dataset
+pred_ecpt_df <- cbind(all_exp_outcome, pred_ecpt_df)|> 
+  mutate(metabolite_model = "ecpt")
+
+# Uncenter data
+pred_ecpt_df$pred_agp <- pred_ecpt_df$pred_centered + mean(all_exp_outcome$ssagp)
+pred_ecpt_df$lci_agp <- pred_ecpt_df$lci_centered + mean(all_exp_outcome$ssagp)
+pred_ecpt_df$uci_agp <- pred_ecpt_df$uci_centered + mean(all_exp_outcome$ssagp)
+
+# Plot
+ecpt_s <- ggplot(pred_ecpt_df, aes(x = ecpt, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("ecpt (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+ggtitle("ecpt")
+```
+
+```{r mcoh model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mcoh with penalized spline 
+mcoh_model <- gam(ssagp ~ s(mcoh) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+# Generate predictions and standard errors
+pred_mcoh <- predict(mcoh_model, se.fit = TRUE)
+
+# Create dataframe for predictions and standard errors
+pred_mcoh_df <- data.frame(
+  pred_centered = pred_mcoh$fit,
+  se = pred_mcoh$se.fit,
+  lci_centered = pred_mcoh$fit - 1.96 * pred_mcoh$se.fit,
+  uci_centered = pred_mcoh$fit + 1.96 * pred_mcoh$se.fit
+)
+
+#exclude missing values from original dataset and bind two datasets 
+all_exp_outcome <- all_exp_outcome[complete.cases(all_exp_outcome), ]
+
+# Combine predictions and original dataset
+pred_mcoh_df <- cbind(all_exp_outcome, pred_mcoh_df)|> 
+  mutate(metabolite_model = "mcoh")
+
+# Uncenter data
+pred_mcoh_df$pred_agp <- pred_mcoh_df$pred_centered + mean(all_exp_outcome$ssagp)
+pred_mcoh_df$lci_agp <- pred_mcoh_df$lci_centered + mean(all_exp_outcome$ssagp)
+pred_mcoh_df$uci_agp <- pred_mcoh_df$uci_centered + mean(all_exp_outcome$ssagp)
+
+# Plot
+mcoh_s <- ggplot(pred_mcoh_df, aes(x = mcoh, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("mcoh (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+ggtitle("mcoh")
+```
+
+```{r mep model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mep with penalized spline 
+mep_model <- gam(ssagp ~ s(mep) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+# Generate predictions and standard errors
+pred_mep <- predict(mep_model, se.fit = TRUE)
+
+# Create dataframe for predictions and standard errors
+pred_mep_df <- data.frame(
+  pred_centered = pred_mep$fit,
+  se = pred_mep$se.fit,
+  lci_centered = pred_mep$fit - 1.96 * pred_mep$se.fit,
+  uci_centered = pred_mep$fit + 1.96 * pred_mep$se.fit
+)
+
+#exclude missing values from original dataset and bind two datasets 
+all_exp_outcome <- all_exp_outcome[complete.cases(all_exp_outcome), ]
+
+# Combine predictions and original dataset
+pred_mep_df <- cbind(all_exp_outcome, pred_mep_df) |> 
+  mutate(metabolite_model = "mep")
+
+# Uncenter data
+pred_mep_df$pred_agp <- pred_mep_df$pred_centered + mean(all_exp_outcome$ssagp)
+pred_mep_df$lci_agp <- pred_mep_df$lci_centered + mean(all_exp_outcome$ssagp)
+pred_mep_df$uci_agp <- pred_mep_df$uci_centered + mean(all_exp_outcome$ssagp)
+
+# Plot
+mep_s <- ggplot(pred_mep_df, aes(x = mep, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("mep (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+ggtitle("mep")
+```
+
+The mhht model below is likely not showing any reportable data due to the increasingly wide confidence interval at higher levels of metabolite concentration
+```{r mhht model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mhht with penalized spline 
+mhht_model <- gam(ssagp ~ s(mhht) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+# Generate predictions and standard errors
+pred_mhht <- predict(mhht_model, se.fit = TRUE)
+
+# Create dataframe for predictions and standard errors
+pred_mhht_df <- data.frame(
+  pred_centered = pred_mhht$fit,
+  se = pred_mhht$se.fit,
+  lci_centered = pred_mhht$fit - 1.96 * pred_mhht$se.fit,
+  uci_centered = pred_mhht$fit + 1.96 * pred_mhht$se.fit
+)
+
+
+# Combine predictions and original dataset
+pred_mhht_df <- cbind(all_exp_outcome, pred_mhht_df) |> 
+  mutate(metabolite_model = "mhht")
+
+# Uncenter data
+pred_mhht_df$pred_agp <- pred_mhht_df$pred_centered + mean(all_exp_outcome$ssagp)
+pred_mhht_df$lci_agp <- pred_mhht_df$lci_centered + mean(all_exp_outcome$ssagp)
+pred_mhht_df$uci_agp <- pred_mhht_df$uci_centered + mean(all_exp_outcome$ssagp)
+
+# Plot
+mhht_s <- ggplot(pred_mhht_df, aes(x = mhht, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("mhht (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+  ggtitle("mhht")
+```
+
+```{r mhht model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mib with penalized spline 
+mib_model <- gam(ssagp ~ s(mib) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+# Generate predictions and standard errors
+pred_mib <- predict(mib_model, se.fit = TRUE)
+
+# Create dataframe for predictions and standard errors
+pred_mib_df <- data.frame(
+  pred_centered = pred_mib$fit,
+  se = pred_mib$se.fit,
+  lci_centered = pred_mib$fit - 1.96 * pred_mib$se.fit,
+  uci_centered = pred_mib$fit + 1.96 * pred_mib$se.fit
+)
+
+
+# Combine predictions and original dataset
+pred_mib_df <- cbind(all_exp_outcome, pred_mib_df) |> 
+  mutate(metabolite_model = "mib")
+
+# Uncenter data
+pred_mib_df$pred_agp <- pred_mib_df$pred_centered + mean(all_exp_outcome$ssagp)
+pred_mib_df$lci_agp <- pred_mib_df$lci_centered + mean(all_exp_outcome$ssagp)
+pred_mib_df$uci_agp <- pred_mib_df$uci_centered + mean(all_exp_outcome$ssagp)
+
+# Plot
+mib_s <- ggplot(pred_mib_df, aes(x = mib, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("mib (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+  ggtitle("mib")
+```
+
+```{r mhnc model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mhnc with penalized spline 
+mhnc_model <- gam(ssagp ~ s(mhnc) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+# Generate predictions and standard errors
+pred_mhnc <- predict(mhnc_model, se.fit = TRUE)
+
+# Create dataframe for predictions and standard errors
+pred_mhnc_df <- data.frame(
+  pred_centered = pred_mhnc$fit,
+  se = pred_mhnc$se.fit,
+  lci_centered = pred_mhnc$fit - 1.96 * pred_mhnc$se.fit,
+  uci_centered = pred_mhnc$fit + 1.96 * pred_mhnc$se.fit
+)
+
+# Combine predictions and original dataset
+pred_mhnc_df <- cbind(all_exp_outcome, pred_mhnc_df)|> 
+  mutate(metabolite_model = "mhnc")
+
+# Uncenter data
+pred_mhnc_df$pred_agp <- pred_mhnc_df$pred_centered + mean(all_exp_outcome$ssagp)
+pred_mhnc_df$lci_agp <- pred_mhnc_df$lci_centered + mean(all_exp_outcome$ssagp)
+pred_mhnc_df$uci_agp <- pred_mhnc_df$uci_centered + mean(all_exp_outcome$ssagp)
+
+# Plot
+mhnc_s <- ggplot(pred_mhnc_df, aes(x = mhnc, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("mhnc (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+  ggtitle("mhnc")
+```
+
+This one also has an extremely wide confidence interval at larger values
+```{r mhp model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mhh with penalized spline 
+mhh_model <- gam(ssagp ~ s(mhh) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+# Generate predictions and standard errors
+pred_mhh <- predict(mhh_model, se.fit = TRUE)
+
+# Create dataframe for predictions and standard errors
+pred_mhh_df <- data.frame(
+  pred_centered = pred_mhh$fit,
+  se = pred_mhh$se.fit,
+  lci_centered = pred_mhh$fit - 1.96 * pred_mhh$se.fit,
+  uci_centered = pred_mhh$fit + 1.96 * pred_mhh$se.fit
+)
+
+
+# Combine predictions and original dataset
+pred_mhh_df <- cbind(all_exp_outcome, pred_mhh_df) |> 
+  mutate(metabolite_model = "mhh")
+
+# Uncenter data
+pred_mhh_df$pred_agp <- pred_mhh_df$pred_centered + mean(all_exp_outcome$ssagp)
+pred_mhh_df$lci_agp <- pred_mhh_df$lci_centered + mean(all_exp_outcome$ssagp)
+pred_mhh_df$uci_agp <- pred_mhh_df$uci_centered + mean(all_exp_outcome$ssagp)
+
+# Plot
+mhh_s <- ggplot(pred_mhh_df, aes(x =mhh, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("mhh (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+  ggtitle("mhh")
+```
+
+Another situation with very wide confidence intervals at higher metabolite concentrations
+```{r mzp model, message=FALSE, warning=FALSE, echo = FALSE}
+# Fit GAM model for mzp with penalized spline 
+mzp_model <- gam(ssagp ~ s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+# Generate predictions and standard errors
+pred_mzp <- predict(mzp_model, se.fit = TRUE)
+
+# Create dataframe for predictions and standard errors
+pred_mzp_df <- data.frame(
+  pred_centered = pred_mzp$fit,
+  se = pred_mzp$se.fit,
+  lci_centered = pred_mzp$fit - 1.96 * pred_mzp$se.fit,
+  uci_centered = pred_mzp$fit + 1.96 * pred_mzp$se.fit
+)
+
+
+# Combine predictions and original dataset
+pred_mzp_df <- cbind(all_exp_outcome, pred_mzp_df) |> 
+  mutate(metabolite_model = "mzp")
+
+# Uncenter data
+pred_mzp_df$pred_agp <- pred_mzp_df$pred_centered + mean(all_exp_outcome$ssagp)
+pred_mzp_df$lci_agp <- pred_mzp_df$lci_centered + mean(all_exp_outcome$ssagp)
+pred_mzp_df$uci_agp <- pred_mzp_df$uci_centered + mean(all_exp_outcome$ssagp)
+
+# Plot
+mzp_s <- ggplot(pred_mzp_df, aes(x =mzp, y = pred_agp)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+  xlab("mzp (ug/L)") + 
+  ylab("AGP (mg/mL)") + 
+  ggtitle("mzp")
+```
+
+```{r}
+#Combine all plots
+gridExtra::grid.arrange(ecpt_s, mcoh_s, mep_s, mhht_s, mib_s, mhnc_s, mhh_s, mzp_s, ncol = 3, top = "Non-linear models of metabolite exposure-response curves with penalized splines")
+```
+
+
 **Returning to Total Model with Penalized Splines, adding covariates above**
 ```{r Adding Covariates to Penalized Spline Regression using GAM}
-total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(total_covari_model)
-#when adjusting for covariates, ecpt, mcoh, mhh, mhht, mib are the six metabolites that have an edf greater than 1
+
 ```
 In this model, there are greater differences between children's ethnicities and ssagp concentration, where Mexican American children are having a significant per unit increase in ssagp concentration for adjusted phthalate metabolite exposure.
 
-# Natural Splines 
+## Natural Splines 
 
 ```{r Natural Splines, message=FALSE, warning=FALSE}
-#Fit natural splines for metabolites with edf not equal to 1 - ecpt, mcoh, mep, mhht, mhnc, mhp, mnp, mzp
+#Fit natural splines for metabolites with edf not equal to 1 - ecpt, mcoh, mep, mhh, mhht, mhnc, mib, mzp
 
 # Fit lm model for ecpt with natural spline
-ecpt_ns_2 <- lm(ssagp ~ ns(ecpt, df = 2), data = exp_outcome)
-ecpt_ns_3 <- lm(ssagp ~ ns(ecpt, df = 3), data = exp_outcome)
-ecpt_ns_4 <- lm(ssagp ~ ns(ecpt, df = 4), data = exp_outcome)
-ecpt_ns_5 <- lm(ssagp ~ ns(ecpt, df = 5), data = exp_outcome)
+ecpt_ns_2 <- lm(ssagp ~ ns(ecpt, df = 2) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+ecpt_ns_3 <- lm(ssagp ~ ns(ecpt, df = 3) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+ecpt_ns_4 <- lm(ssagp ~ ns(ecpt, df = 4) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+ecpt_ns_5 <- lm(ssagp ~ ns(ecpt, df = 5) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 AIC(ecpt_ns_2)
 AIC(ecpt_ns_3)
@@ -535,12 +533,12 @@ AIC(ecpt_ns_4)
 AIC(ecpt_ns_5)
 
 
-summary(ecpt_ns_3)
+summary(ecpt_ns_4)
 
-# model with df 3 has the lowest AIC 
+# model with df 4 has the lowest AIC 
 
 # construct predictions based on model 
-predagp.ecpt.ns <- predict(ecpt_ns_3, se.fit = TRUE, type = "terms")
+predagp.ecpt.ns <- predict(ecpt_ns_4, se.fit = TRUE, type = "terms")
 
 head(predagp.ecpt.ns)
 
@@ -551,8 +549,8 @@ predagp.ecpt.ns <- as.data.frame(predagp.ecpt.ns)
 # Rename predictions and standard errors
 
 predagp.ecpt.ns  <- predagp.ecpt.ns |> 
-  mutate( pred.centered = ns.ecpt..df...3.,
-          se = ns.ecpt..df...3..1)
+  mutate( pred.centered = fit.ns.ecpt..df...4.,
+          se = se.fit.ns.ecpt..df...4.)
 
 # 6c.iv Compute 95% confidence intervals 
 
@@ -567,7 +565,7 @@ predagp.ecpt.ns <- predagp.ecpt.ns |>
 
 # Combine with data 
 
-predagp.ecpt.ns <- predagp.ecpt.ns |> bind_cols(exp_outcome)
+predagp.ecpt.ns <- predagp.ecpt.ns |> bind_cols(all_exp_outcome)
 
 #  Uncenter 
 
@@ -590,10 +588,10 @@ ggplot(predagp.ecpt.ns, aes(ssagp)) +
 ```{r}
 
 # Fit lm model for moh with natural spline
-moh_ns_2 <- lm(ssagp ~ ns(moh, df = 2), data = exp_outcome)
-moh_ns_3 <- lm(ssagp ~ ns(moh, df = 3), data = exp_outcome)
-moh_ns_4 <- lm(ssagp ~ ns(moh, df = 4), data = exp_outcome)
-moh_ns_5 <- lm(ssagp ~ ns(moh, df = 5), data = exp_outcome)
+moh_ns_2 <- lm(ssagp ~ ns(moh, df = 2) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+moh_ns_3 <- lm(ssagp ~ ns(moh, df = 3) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+moh_ns_4 <- lm(ssagp ~ ns(moh, df = 4) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+moh_ns_5 <- lm(ssagp ~ ns(moh, df = 5) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 AIC(moh_ns_2)
 AIC(moh_ns_3)
@@ -602,7 +600,7 @@ AIC(moh_ns_5)
 
 
 # construct predictions based on model 
-predagp.moh.ns <- predict(moh_ns_3, se.fit = TRUE, type = "terms")
+predagp.moh.ns <- predict(moh_ns_2, se.fit = TRUE, type = "terms")
 
 # convert to dataframe 
 
@@ -611,8 +609,8 @@ predagp.moh.ns <- as.data.frame(predagp.moh.ns)
 # Rename predictions and standard errors
 
 predagp.moh.ns  <- predagp.moh.ns |> 
-  mutate( pred.centered = ns.moh..df...3.,
-          se = ns.moh..df...3..1)
+  mutate( pred.centered = fit.ns.moh..df...2.,
+          se = se.fit.ns.moh..df...2.)
 
 # 6c.iv Compute 95% confidence intervals 
 
@@ -627,7 +625,7 @@ predagp.moh.ns <- predagp.moh.ns |>
 
 # Combine with data 
 
-predagp.moh.ns <- predagp.moh.ns |> bind_cols(exp_outcome)
+predagp.moh.ns <- predagp.moh.ns |> bind_cols(all_exp_outcome)
 
 #  Uncenter 
 
@@ -647,6 +645,83 @@ ggplot(predagp.moh.ns, aes(ssagp)) +
   theme(axis.title = element_text(size = 20))
 ```
 
+# Linear Models 
+
+```{r}
+# Model metabolites linearly 
+
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+summary(lin_covari_model)
+
+all_exp_outcome <- all_exp_outcome[all_exp_outcome$cnp <= 1e-04, ]
+```
+
+
+```{r}
+# Individual linear models 
+
+cnp_model <- lm(ssagp ~ cnp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+cop_model <- lm(ssagp ~ cop + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+ecp_model <- lm(ssagp ~ ecp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+ecpt_model <- lm(ssagp ~ ecpt + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+hibp_model <- lm(ssagp ~ hibp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mbp_model <- lm(ssagp ~ mbp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mc1_model <- lm(ssagp ~ mc1 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mcoh_model <- lm(ssagp ~ mcoh + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mep_model <- lm(ssagp ~ mep + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mhpb_model <- lm(ssagp ~ mhbp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mhh_model <- lm(ssagp ~ mhh + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mhht_model <- lm(ssagp ~ mhht + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mhnc_model <- lm(ssagp ~ mhnc + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mhp_model <- lm(ssagp ~ mhp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mib_model <- lm(ssagp ~ mib + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mnp_model <- lm(ssagp ~ mnp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+moh_model <- lm(ssagp ~ moh + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+monp_model <- lm(ssagp ~ monp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+mzp_model <- lm(ssagp ~ mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+summary(mzp_model)
+
+# Example linear plot for cnp 
+
+data_cnp <- data.frame(
+  cnp = all_exp_outcome$cnp,
+  gender_female = all_exp_outcome$gender_female,
+  age_yrs_screen = all_exp_outcome$age_yrs_screen,
+  income_family_annual = all_exp_outcome$income_family_annual,
+  race_ethn3 = all_exp_outcome$race_ethn3,
+  ssagp = all_exp_outcome$ssagp
+)
+
+# Predict response variable using the model
+data_cnp$predicted_ssagp <- predict(cnp_model, newdata = data_cnp)
+
+# Plot relationship between cnp and ssagp after accounting for other predictors
+ggplot(data_cnp, aes(x = cnp, y = ssagp)) +
+  geom_point() + 
+  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+  labs(x = "CNP", y = "SSAGP", title = "CNP and SSAGP")
+
+```
 
 
 # PCA Attempt (will add FA)
