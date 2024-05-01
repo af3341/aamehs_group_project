@@ -138,7 +138,7 @@ demo <- demo |>
 
 # filtering for only covariates we need
 demo_new = demo |> 
-  select(seqn, gender, age_yrs_screen, race_ethn1, race_ethn3, income_family_annual)
+  select(seqn, gender, age_yrs_screen, race_ethn3, income_family_annual)
 ```
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
@@ -263,7 +263,7 @@ exposures_matrix <- as.matrix(exposures)
 #Put confounders in a matrix
 #gender, age_yrs_screen, race_ethn1, race_ethn3, income_family_annual
 confounders <- all_exp_outcome %>%
-  dplyr::select(gender, age_yrs_screen, race_ethn1, race_ethn3)#, income_family_annual)
+  dplyr::select(gender, age_yrs_screen, race_ethn3)
 
 confounders <- as.matrix(confounders)
 summary(confounders)
