@@ -1214,6 +1214,7 @@ mzp_l <- ggplot(data_mzp, aes(x = mzp, y = ssagp)) +
 
 ```{r message=FALSE, warning=FALSE}
 #Combine all plots
+\
 linear_plots_combined <- grid.arrange(cnp_l, cop_l, ecp_l, ecpt_l, hibp_l, mbp_l, mc1_l, mcoh_l, mep_l, mhbp_l, mhh_l, mhht_l, mhnc_l, mhp_l, mib_l, mnp_l, moh_l, monp_l, mzp_l, ncol = 4, top = "Linear Models of Metabolite Exposure-Response Curves")
 ```
 
