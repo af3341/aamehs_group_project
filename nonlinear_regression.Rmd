@@ -173,7 +173,7 @@ summary(exp_outcome)
 #Joining current demographic values we have with the exp_outcome table
 
 demo_new = demo |> 
-  select(seqn, gender, age_yrs_screen, race_ethn1, race_ethn3, income_family_annual)
+  select(seqn, gender, age_yrs_screen, race_ethn3, income_family_annual)
 
 all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |> 
   mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
@@ -196,6 +196,11 @@ summary(demographic_model)
 lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(lin_covari_model)
+
+#Old version 
+lin_covari_model2 = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+
+summary(lin_covari_model2)
 ```
 
 Using this initial list of covariates, we do not currently have enough evidence to suggest a statistically significant difference in ssagp differing across ethnic groups, gender, or income poverty ratio. Under these adjusted assumptions, both mcoh and mhnc are the metabolites tht have the most significant impact on ssagp.

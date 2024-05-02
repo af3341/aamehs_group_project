@@ -135,6 +135,10 @@ demo <- demo |>
 
 demo <- demo |> 
   filter(age_yrs_screen >= 3 & age_yrs_screen <= 16)
+
+# filtering for only covariates we need
+demo_new = demo |> 
+  select(seqn, gender, age_yrs_screen, race_ethn3, income_family_annual)
 ```
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
@@ -152,16 +156,43 @@ wide_phth_creat =
 # went back to checkin_feb_20_deliverable to get rid of them there 
 
 
-all_data =
-  inner_join(demo, wide_phth_creat, by = "seqn") #915 people with demo and phthalate data
-
-
 exp_outcome =
   inner_join(wide_phth_creat, agp_serum, by = "seqn") %>% 
   filter(!is.na(ssagp)) #662 participants that provided agp samples and have phthalate data for 
   
 summary(exp_outcome)
 (292/954)*100
+##########
+
+all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |> 
+  mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
+  mutate(eth_mex = case_when(race_ethn3 == 1 ~ 1, TRUE ~ 0),
+         eth_hisp_oth = case_when(race_ethn3 == 2 ~ 1, TRUE ~ 0),
+         eth_white = case_when(race_ethn3 == 3 ~ 1, TRUE ~ 0),
+         eth_black = case_when(race_ethn3 == 4 ~ 1, TRUE ~ 0),
+         eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
+         eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) #%>% 
+  #select(-ucr)
+
+all_data =
+  inner_join(demo, wide_phth_creat, by = "seqn") #915 people with demo and phthalate data
+
+
+all_data_with_outcome <- all_data %>% 
+  inner_join(agp_serum, all_data, by = "seqn")
+
+sum(exp_outcome$seqn %in% all_data$seqn)
+
+# All of the covariates, exposure, and outcome data
+all_var <- all_data_with_outcome |> 
+  mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
+  mutate(eth_mex = case_when(race_ethn3 == 1 ~ 1, TRUE ~ 0),
+         eth_hisp_oth = case_when(race_ethn3 == 2 ~ 1, TRUE ~ 0),
+         eth_white = case_when(race_ethn3 == 3 ~ 1, TRUE ~ 0),
+         eth_black = case_when(race_ethn3 == 4 ~ 1, TRUE ~ 0),
+         eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
+         eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
+
 
 ```
 
@@ -179,43 +210,43 @@ library(ggplot2)
 library(fastDummies) 
 ```
 
-# Fit BKMR model
+# ignore this 
 ```{r}
-set.seed(111)
-
-#create a matrix of exposures
-exposures <- select(exp_outcome, cnp:mzp)
-
-exposures_matrix <- as.matrix(exposures)
-
-#Put confounders in a matrix
-#first, merging all_data with exp_outcome (all data is such a misnomer lol)
-# dta =
-#   left_join(exp_outcome, all_data, by = "seqn")
+# set.seed(111)
 # 
-# confounders <- dta %>%
-#   dplyr::select(gender, age_yrs_screen, race_ethn1, race_ethn3) #removing income poverty ratio for now bc i think we can't have missing data for this
+# #create a matrix of exposures
+# exposures <- select(all_var, cnp:mzp)
 # 
-# confounders <- as.matrix(confounders)
-# summary(confounders)
-
-## **somehow there are a lot of NAs in demographic info for this population??? idk, someone should verify this, bc of that i am not going to include confounders this time around bc u cannot have NAs in BKMR ** ## 
-
-#Fit BKMR model
-# This will take a 1.25 hours to run. 
-
-fitkm <- kmbayes(y = exp_outcome$ssagp,   # outcome variable
-                 Z = exposures,       # dataframe of exposures
-                 X = NULL, # dataframe of confounders
-                 iter = 10000,    # number of iterations
-                 verbose = FALSE, # print interim progress of model?
-                 varsel = TRUE)   # 
-
-#Save BMKR Model
-saveRDS(fitkm, file = "data/initial_bkmr_solution.RDS")
-
-# Read in BKMR Model 
-fitkm <- readRDS("data/initial_bkmr_solution.RDS")
+# exposures_matrix <- as.matrix(exposures)
+# 
+# #Put confounders in a matrix
+# #first, merging all_data with exp_outcome (all data is such a misnomer lol)
+# # dta =
+# #   left_join(exp_outcome, all_data, by = "seqn")
+# # 
+# # confounders <- dta %>%
+# #   dplyr::select(gender, age_yrs_screen, race_ethn1, race_ethn3) #removing income poverty ratio for now bc i think we can't have missing data for this
+# # 
+# # confounders <- as.matrix(confounders)
+# # summary(confounders)
+# 
+# ## **somehow there are a lot of NAs in demographic info for this population??? idk, someone should verify this, bc of that i am not going to include confounders this time around bc u cannot have NAs in BKMR ** ## 
+# 
+# #Fit BKMR model
+# # This will take a 1.25 hours to run. 
+# 
+# fitkm <- kmbayes(y = all_var$ssagp,   # outcome variable
+#                  Z = exposures,       # dataframe of exposures
+#                  X = NULL, # dataframe of confounders
+#                  iter = 10000,    # number of iterations
+#                  verbose = FALSE, # print interim progress of model?
+#                  varsel = TRUE)   # 
+# 
+# #Save BMKR Model
+# saveRDS(fitkm, file = "data/initial_bkmr_solution.RDS")
+# 
+# # Read in BKMR Model 
+# fitkm <- readRDS("data/initial_bkmr_solution.RDS")
 ```
 # attempt 2: Research question
 What is the overall effect of exposure to mixture of phthalate/phthalate alternatives on AGP levels?
@@ -224,19 +255,15 @@ What is the overall effect of exposure to mixture of phthalate/phthalate alterna
 ```{r}
 set.seed(111)
 
-#from nonlinear regression rmd 
-all_exp_outcome = inner_join(exp_outcome, demo, by = "seqn")
-summary(all_exp_outcome)
-#280 obs
-
 #create a matrix of exposures
 exposures <- select(all_exp_outcome, cnp:mzp)
 
 exposures_matrix <- as.matrix(exposures)
 
 #Put confounders in a matrix
+#gender, age_yrs_screen, race_ethn1, race_ethn3, income_family_annual
 confounders <- all_exp_outcome %>%
-  dplyr::select(gender, age_yrs_screen, race_ethn1, race_ethn3) #removing income poverty ratio for now bc i think we can't have missing data for this
+  dplyr::select(gender, age_yrs_screen, race_ethn3)
 
 confounders <- as.matrix(confounders)
 summary(confounders)
@@ -314,19 +341,27 @@ adj_pred.resp.univar <- PredictorResponseUnivar(fit = adj_fitkm,
 
 #Create Plot 
 
-ggplot(pred.resp.univar, aes(z, est, ymin = est - 1.96*se, ymax = est + 1.96*se)) + 
+mixture_interaction <- ggplot(adj_pred.resp.univar, aes(z, est, ymin = est - 1.96*se, ymax = est + 1.96*se)) + 
   geom_smooth(stat = "identity") + 
   facet_wrap(~ variable, scales = "free_x") +
   xlab("Phthalate Concentrations") + 
   ylab("Change in Expected AGP") + 
-  plotTheme
+  plotTheme + theme(
+  # Change overall plot size
+  plot.title = element_text(size = 10),  # Title size
+  axis.title = element_text(size = 8),   # Axis title size
+  axis.text = element_text(size = 4)     # Axis text size
+)
+
+ggsave("output/mixture_interaction.pdf", plot = mixture_interaction)
+
 
 # every univariate association null lol and no interaction 
 
 # Plot exposure-response of total mixture
 # Estimate exposure-response for each quantile 
 
-#this takes a long time to run i dont remember how long ~1hr
+#this takes a couple minutes to run 
 adj_responses.overall <- OverallRiskSummaries(fit = adj_fitkm,     # model 
                                       y = all_exp_outcome$ssagp,   # outcome 
                                       Z = exposures_matrix,       # exposures
@@ -340,11 +375,13 @@ adj_responses.overall
 
 # 4d.iii Plot
 
-ggplot(adj_responses.overall, aes(quantile, est, ymin = est - 1.96*sd, 
+mixture_overall <- ggplot(adj_responses.overall, aes(quantile, est, ymin = est - 1.96*sd, 
                               ymax = est + 1.96*sd)) + 
   geom_pointrange() + 
   ylab("Change in Expected AGP") + 
   plotTheme
+
+ggsave("output/mixture_overall.pdf", plot = mixture_overall)
 
 # saw absolutely null effect of mixtures of phthalates on AGP levels....
 ```

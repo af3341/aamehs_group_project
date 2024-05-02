@@ -225,7 +225,7 @@ summary(exp_outcome)
 ```{r}
 
 demo_new = demo |> 
-  select(seqn, gender, age_yrs_screen, race_ethn1, race_ethn3, income_family_annual)
+  select(seqn, gender, age_yrs_screen, race_ethn3, income_family_annual)
 
 all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |> 
   mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
@@ -435,7 +435,7 @@ densityplot(MImput.df.Conf)
 
 # 4A Fit models
 
-mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ mhp + gender + age_yrs_screen + race_ethn1 + race_ethn3 + income_family_annual))
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ mhp + gender + age_yrs_screen + race_ethn3 + income_family_annual))
 
 ##** Class Question **##
 # How many regression models do I run in this step? 
@@ -483,7 +483,8 @@ mod.MImput.Conf.PooledCoeff[2,]
 
 # 6b Create model with original data
 
-mod.NoMiss <- summary(lm(ssagp ~ mhp + gender + age_yrs_screen + race_ethn1 + race_ethn3 + income_family_annual), data = df.Conf.miss %>% na.omit())
+mod.NoMiss <- summary(lm(ssagp ~ mhp + gender + age_yrs_screen + race_ethn3 + income_family_annual,  data = df.Conf.miss))
+
 
 # 6c Compare coefficient estimates
 
@@ -494,6 +495,33 @@ mod.MImput.Conf.PooledCoeff[2:6,2]
 
 mod.NoMiss$coefficients[2:6,2]
 mod.MImput.Conf.PooledCoeff[2:6,3]
+
+
+```
+
+# Practice Work - Seeing if MI Dataset can be compared to Nonlinear Work
+```{r}
+
+#first fit linear model 
+
+old_nocovari= lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp, data = exp_outcome)
+
+summary(old_nocovari)
+
+
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+summary(lin_covari_model)
+
+#fit complete model with penalized splines 
+
+total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+
+summary(total_model)
+
+#edf not equal to 1 for ecpt, mcoh, mep, mhh, mhht, mhnc, mib, mzp
+#going to fit GAM models with penalized splines for those 8 metabolites
+
 
 
 ```
