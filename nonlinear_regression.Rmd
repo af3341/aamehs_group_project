@@ -259,13 +259,13 @@ pred_ecpt_df$uci_agp <- pred_ecpt_df$uci_centered + mean(all_exp_outcome$ssagp)
 ecpt_s <- ggplot(pred_ecpt_df, aes(x = ecpt, y = pred_agp)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("ecpt (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-ggtitle("ecpt")
+  xlab("MECPTP (g/L)") + 
+  ylab("AGP (ng/mL)") 
 ```
 
 ```{r mcoh model, message=FALSE, warning=FALSE, echo = FALSE}
 # Fit GAM model for mcoh with penalized spline 
+
 # mcoh_model <- gam(ssagp ~ s(mcoh) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 # 
 # # Generate predictions and standard errors
@@ -331,9 +331,8 @@ pred_mep_df$uci_agp <- pred_mep_df$uci_centered + mean(all_exp_outcome$ssagp)
 mep_s <- ggplot(pred_mep_df, aes(x = mep, y = pred_agp)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mep (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-ggtitle("mep")
+  xlab("MEP (g/L)") + 
+  ylab("AGP (ng/mL)")
 ```
 
 The mhht model below is likely not showing any reportable data due to the increasingly wide confidence interval at higher levels of metabolite concentration
@@ -366,9 +365,8 @@ pred_mhht_df$uci_agp <- pred_mhht_df$uci_centered + mean(all_exp_outcome$ssagp)
 mhht_s <- ggplot(pred_mhht_df, aes(x = mhht, y = pred_agp)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mhht (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("mhht")
+  xlab("MEHHTP (g/L)") + 
+  ylab("AGP (ng/mL)")
 ```
 
 ```{r mhht model, message=FALSE, warning=FALSE, echo = FALSE}
@@ -400,9 +398,8 @@ pred_mib_df$uci_agp <- pred_mib_df$uci_centered + mean(all_exp_outcome$ssagp)
 mib_s <- ggplot(pred_mib_df, aes(x = mib, y = pred_agp)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mib (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("mib")
+  xlab("MiBP (g/L)") + 
+  ylab("AGP (ng/mL)")
 ```
 
 ```{r mhnc model, message=FALSE, warning=FALSE, echo = FALSE}
@@ -468,9 +465,8 @@ pred_mhh_df$uci_agp <- pred_mhh_df$uci_centered + mean(all_exp_outcome$ssagp)
 mhh_s <- ggplot(pred_mhh_df, aes(x =mhh, y = pred_agp)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mhh (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("mhh")
+  xlab("MEHHP (g/L)") + 
+  ylab("AGP (ng/mL)")
 ```
 
 Another situation with very wide confidence intervals at higher metabolite concentrations
@@ -503,15 +499,16 @@ pred_mzp_df$uci_agp <- pred_mzp_df$uci_centered + mean(all_exp_outcome$ssagp)
 mzp_s <- ggplot(pred_mzp_df, aes(x =mzp, y = pred_agp)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mzp (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("mzp")
+  xlab("MBzP (g/L)") + 
+  ylab("AGP (ng/mL)")
 ```
 
 ```{r}
 #Combine all plots
 combined_plots_splines <- grid.arrange(ecpt_s, mep_s, mhht_s, mib_s, mhh_s, mzp_s, ncol = 3, top = "Non-Linear Models of Metabolite Exposure-Response Curves with Penalized Splines")
 
+#save plot as png
+ggsave("combined_plots_splines.png", combined_plots_splines, width = 12, height = 8)
 ```
 
 
@@ -722,7 +719,7 @@ data_cnp$predicted_ssagp <- predict(cnp_model, newdata = data_cnp)
 cnp_l <- ggplot(data_cnp, aes(x = cnp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "CNP (ug/L)", y = "AGP (mg/mL)", title = "CNP") + 
+  labs(x = "MCNP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -745,7 +742,7 @@ data_cop$predicted_ssagp <- predict(cop_model, newdata = data_cop)
 cop_l <- ggplot(data_cop, aes(x = cop, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "COP (ug/L)", y = "AGP (mg/mL)", title = "COP") + 
+  labs(x = "MCOP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -768,7 +765,7 @@ data_ecp$predicted_ssagp <- predict(ecp_model, newdata = data_ecp)
 ecp_l <- ggplot(data_ecp, aes(x = ecp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "ECP (ug/L)", y = "AGP (mg/mL)", title = "ECP") + 
+  labs(x = "MECPP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -792,62 +789,13 @@ data_ecpt$predicted_ssagp <- predict(ecpt_model, newdata = data_ecpt)
 ecpt_l <- ggplot(data_ecpt, aes(x = ecpt, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "ECPT (ug/L)", y = "AGP (mg/mL)", title = "ECPT") + 
+  labs(x = "MECPTP (g/L)", y = "AGP (ng/mL)") +
   theme_classic()
 ```
-
-```{r}
-# ecpt
-
-data_hibp <- data.frame(
-  hibp = all_exp_outcome$hibp,
-  gender_female = all_exp_outcome$gender_female,
-  age_yrs_screen = all_exp_outcome$age_yrs_screen,
-  income_family_annual = all_exp_outcome$income_family_annual,
-  race_ethn3 = all_exp_outcome$race_ethn3,
-  ssagp = all_exp_outcome$ssagp
-)
-
-# Predict response variable using the model
-data_hibp$predicted_ssagp <- predict(hibp_model, newdata = data_hibp)
-
-# Plot relationship between cnp and ssagp after accounting for other predictors
-hibp_l <- ggplot(data_hibp, aes(x = hibp, y = ssagp)) +
-  geom_point() + 
-  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "HIBP (ug/L)", y = "AGP (mg/mL)", title = "HIBP") + 
-  theme_classic()
-```
-
-```{r}
-# ecpt
-
-
-data_mbp <- data.frame(
-  mbp = all_exp_outcome$mbp,
-  gender_female = all_exp_outcome$gender_female,
-  age_yrs_screen = all_exp_outcome$age_yrs_screen,
-  income_family_annual = all_exp_outcome$income_family_annual,
-  race_ethn3 = all_exp_outcome$race_ethn3,
-  ssagp = all_exp_outcome$ssagp
-)
-
-# Predict response variable using the model
-data_mbp$predicted_ssagp <- predict(mbp_model, newdata = data_mbp)
-
-# Plot relationship between cnp and ssagp after accounting for other predictors
-mbp_l <- ggplot(data_mbp, aes(x = mbp, y = ssagp)) +
-  geom_point() + 
-  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MBP (ug/L)", y = "AGP (mg/mL)", title = "MBP") + 
-  theme_classic()
-```
-
 
 ```{r}
 # hibp
 
-
 data_hibp <- data.frame(
   hibp = all_exp_outcome$hibp,
   gender_female = all_exp_outcome$gender_female,
@@ -864,13 +812,14 @@ data_hibp$predicted_ssagp <- predict(hibp_model, newdata = data_hibp)
 hibp_l <- ggplot(data_hibp, aes(x = hibp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "HIBP (ug/L)", y = "AGP (mg/mL)", title = "HIBP") + 
+  labs(x = "HiBP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
 ```{r}
 # mbp
 
+
 data_mbp <- data.frame(
   mbp = all_exp_outcome$mbp,
   gender_female = all_exp_outcome$gender_female,
@@ -887,9 +836,10 @@ data_mbp$predicted_ssagp <- predict(mbp_model, newdata = data_mbp)
 mbp_l <- ggplot(data_mbp, aes(x = mbp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MBP (ug/L)", y = "AGP (mg/mL)", title = "MBP") + 
+  labs(x = "MiBP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
+
 
 ```{r}
 # mc1
@@ -910,7 +860,7 @@ data_mc1$predicted_ssagp <- predict(mc1_model, newdata = data_mc1)
 mc1_l <- ggplot(data_mc1, aes(x = mc1, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MC1 (ug/L)", y = "AGP (mg/mL)", title = "MC1") + 
+  labs(x = "MCPP (g/L)", y = "AGP (ng/mL)", title = "MC1") + 
   theme_classic()
 ```
 
@@ -935,6 +885,7 @@ mc1_l <- ggplot(data_mc1, aes(x = mc1, y = ssagp)) +
 #   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
 #   labs(x = "MCOH (ug/L)", y = "AGP (mg/mL)", title = "MCOH") + 
 #   theme_classic()
+
 ```
 
 
@@ -956,8 +907,8 @@ data_mep$predicted_ssagp <- predict(mep_model, newdata = data_mep)
 mep_l <- ggplot(data_mep, aes(x = mep, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MEP (ug/L)", y = "AGP (mg/mL)", title = "MEP") + 
-  theme_classic()
+  labs(x = "MEP (g/L)", y = "AGP (ng/mL)") + 
+  theme_classic() 
 ```
 
 
@@ -980,7 +931,7 @@ data_mhbp$predicted_ssagp <- predict(mhbp_model, newdata = data_mhbp)
 mhbp_l <- ggplot(data_mhbp, aes(x = mhbp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MHBP (ug/L)", y = "AGP (mg/mL)", title = "MHBP") + 
+  labs(x = "MnBP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -1026,7 +977,7 @@ data_mhh$predicted_ssagp <- predict(mhh_model, newdata = data_mhh)
 mhh_l <- ggplot(data_mhh, aes(x = mhh, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MHH (ug/L)", y = "AGP (mg/mL)", title = "MHH") + 
+  labs(x = "MEHHP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -1049,7 +1000,7 @@ data_mhht$predicted_ssagp <- predict(mhht_model, newdata = data_mhht)
 mhht_l <- ggplot(data_mhht, aes(x = mhht, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MHHT (ug/L)", y = "AGP (mg/mL)", title = "MHHT") + 
+  labs(x = "MEHHTP (g/L)", y = "AGP (ng/mL)") +
   theme_classic()
 ```
 
@@ -1118,7 +1069,7 @@ data_mib$predicted_ssagp <- predict(mib_model, newdata = data_mib)
 mib_l <- ggplot(data_mib, aes(x = mib, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MIB (ug/L)", y = "AGP (mg/mL)", title = "MIB") + 
+  labs(x = "MiBP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -1164,7 +1115,7 @@ data_moh$predicted_ssagp <- predict(moh_model, newdata = data_moh)
 moh_l <- ggplot(data_moh, aes(x = moh, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MOH (ug/L)", y = "AGP (mg/mL)", title = "MOH") + 
+  labs(x = "MEOHP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -1187,7 +1138,7 @@ data_monp$predicted_ssagp <- predict(monp_model, newdata = data_monp)
 monp_l <- ggplot(data_monp, aes(x = monp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MONP (ug/L)", y = "AGP (mg/mL)", title = "MONP") + 
+  labs(x = "MONP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -1210,13 +1161,19 @@ data_mzp$predicted_ssagp <- predict(mzp_model, newdata = data_mzp)
 mzp_l <- ggplot(data_mzp, aes(x = mzp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MZP (ug/L)", y = "AGP (mg/mL)", title = "MZP") + 
+  labs(x = "MBzP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
 ```{r message=FALSE, warning=FALSE}
 #Combine all plots
+
 linear_plots_combined <- grid.arrange(cnp_l, cop_l, ecp_l, ecpt_l, hibp_l, mbp_l, mc1_l, mep_l, mhbp_l, mhh_l, mhht_l, mib_l, moh_l, monp_l, mzp_l, ncol = 4, top = "Linear Models of Metabolite Exposure-Response Curves")
+
+
+#save plot as png
+ggsave("linear_plots_combined.png", linear_plots_combined, width = 30, height = 25, units = "cm")
+
 
 ```
 
