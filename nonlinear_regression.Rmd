@@ -30,7 +30,7 @@ library(gridExtra)
 # codebook, LODs: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/PHTHTE_J.htm
 phthte_urine =
   read.xport("data/PHTHTE_J.XPT") %>% 
-  janitor::clean_names()
+  janitor::clean_names() 
 
 # urine creatinine levels 
 # codebook: https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/ALB_CR_J.htm
@@ -58,7 +58,8 @@ phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
   rename_with(~ gsub("^urx", "", .), starts_with("urx")) %>% 
-  filter(!weights == "0")
+  filter(!weights == "0") %>% 
+  select(-mcoh, -mhnc, -mhp, -mnp)
 ```
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
@@ -193,12 +194,12 @@ demographic_model = lm(ssagp ~ gender_female + age_yrs_screen + income_family_an
 summary(demographic_model)
 
 #Adding covariates to simple multiple regression 
-lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mep + mhbp + mhh + mhht + mib + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(lin_covari_model)
 
 #Old version 
-lin_covari_model2 = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
+lin_covari_model2 = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mep + mhbp + mhh + mhht + mib + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + eth_mex + eth_hisp_oth + eth_black + eth_asian + eth_nonhispanic_multirace, data = all_exp_outcome)
 
 summary(lin_covari_model2)
 ```
@@ -211,13 +212,13 @@ Using this initial list of covariates, we do not currently have enough evidence 
 
 #first fit linear model 
 
-lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mep + mhbp + mhh + mhht + mib + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(lin_covari_model)
 
 #fit complete model with penalized splines 
 
-total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mib) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(total_model)
 
@@ -265,38 +266,38 @@ ggtitle("ecpt")
 
 ```{r mcoh model, message=FALSE, warning=FALSE, echo = FALSE}
 # Fit GAM model for mcoh with penalized spline 
-mcoh_model <- gam(ssagp ~ s(mcoh) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
-
-# Generate predictions and standard errors
-pred_mcoh <- predict(mcoh_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mcoh_df <- data.frame(
-  pred_centered = pred_mcoh$fit,
-  se = pred_mcoh$se.fit,
-  lci_centered = pred_mcoh$fit - 1.96 * pred_mcoh$se.fit,
-  uci_centered = pred_mcoh$fit + 1.96 * pred_mcoh$se.fit
-)
-
-#exclude missing values from original dataset and bind two datasets 
-all_exp_outcome <- all_exp_outcome[complete.cases(all_exp_outcome), ]
-
-# Combine predictions and original dataset
-pred_mcoh_df <- cbind(all_exp_outcome, pred_mcoh_df)|> 
-  mutate(metabolite_model = "mcoh")
-
-# Uncenter data
-pred_mcoh_df$pred_agp <- pred_mcoh_df$pred_centered + mean(all_exp_outcome$ssagp)
-pred_mcoh_df$lci_agp <- pred_mcoh_df$lci_centered + mean(all_exp_outcome$ssagp)
-pred_mcoh_df$uci_agp <- pred_mcoh_df$uci_centered + mean(all_exp_outcome$ssagp)
-
-# Plot
-mcoh_s <- ggplot(pred_mcoh_df, aes(x = mcoh, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mcoh (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-ggtitle("mcoh")
+# mcoh_model <- gam(ssagp ~ s(mcoh) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+# 
+# # Generate predictions and standard errors
+# pred_mcoh <- predict(mcoh_model, se.fit = TRUE)
+# 
+# # Create dataframe for predictions and standard errors
+# pred_mcoh_df <- data.frame(
+#   pred_centered = pred_mcoh$fit,
+#   se = pred_mcoh$se.fit,
+#   lci_centered = pred_mcoh$fit - 1.96 * pred_mcoh$se.fit,
+#   uci_centered = pred_mcoh$fit + 1.96 * pred_mcoh$se.fit
+# )
+# 
+# #exclude missing values from original dataset and bind two datasets 
+# all_exp_outcome <- all_exp_outcome[complete.cases(all_exp_outcome), ]
+# 
+# # Combine predictions and original dataset
+# pred_mcoh_df <- cbind(all_exp_outcome, pred_mcoh_df)|> 
+#   mutate(metabolite_model = "mcoh")
+# 
+# # Uncenter data
+# pred_mcoh_df$pred_agp <- pred_mcoh_df$pred_centered + mean(all_exp_outcome$ssagp)
+# pred_mcoh_df$lci_agp <- pred_mcoh_df$lci_centered + mean(all_exp_outcome$ssagp)
+# pred_mcoh_df$uci_agp <- pred_mcoh_df$uci_centered + mean(all_exp_outcome$ssagp)
+# 
+# # Plot
+# mcoh_s <- ggplot(pred_mcoh_df, aes(x = mcoh, y = pred_agp)) + 
+#   geom_line() + 
+#   geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+#   xlab("mcoh (ug/L)") + 
+#   ylab("AGP (mg/mL)") + 
+# ggtitle("mcoh")
 ```
 
 ```{r mep model, message=FALSE, warning=FALSE, echo = FALSE}
@@ -405,36 +406,36 @@ mib_s <- ggplot(pred_mib_df, aes(x = mib, y = pred_agp)) +
 ```
 
 ```{r mhnc model, message=FALSE, warning=FALSE, echo = FALSE}
-# Fit GAM model for mhnc with penalized spline 
-mhnc_model <- gam(ssagp ~ s(mhnc) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
-
-# Generate predictions and standard errors
-pred_mhnc <- predict(mhnc_model, se.fit = TRUE)
-
-# Create dataframe for predictions and standard errors
-pred_mhnc_df <- data.frame(
-  pred_centered = pred_mhnc$fit,
-  se = pred_mhnc$se.fit,
-  lci_centered = pred_mhnc$fit - 1.96 * pred_mhnc$se.fit,
-  uci_centered = pred_mhnc$fit + 1.96 * pred_mhnc$se.fit
-)
-
-# Combine predictions and original dataset
-pred_mhnc_df <- cbind(all_exp_outcome, pred_mhnc_df)|> 
-  mutate(metabolite_model = "mhnc")
-
-# Uncenter data
-pred_mhnc_df$pred_agp <- pred_mhnc_df$pred_centered + mean(all_exp_outcome$ssagp)
-pred_mhnc_df$lci_agp <- pred_mhnc_df$lci_centered + mean(all_exp_outcome$ssagp)
-pred_mhnc_df$uci_agp <- pred_mhnc_df$uci_centered + mean(all_exp_outcome$ssagp)
-
-# Plot
-mhnc_s <- ggplot(pred_mhnc_df, aes(x = mhnc, y = pred_agp)) + 
-  geom_line() + 
-  geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
-  xlab("mhnc (ug/L)") + 
-  ylab("AGP (mg/mL)") + 
-  ggtitle("mhnc")
+# # Fit GAM model for mhnc with penalized spline 
+# mhnc_model <- gam(ssagp ~ s(mhnc) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+# 
+# # Generate predictions and standard errors
+# pred_mhnc <- predict(mhnc_model, se.fit = TRUE)
+# 
+# # Create dataframe for predictions and standard errors
+# pred_mhnc_df <- data.frame(
+#   pred_centered = pred_mhnc$fit,
+#   se = pred_mhnc$se.fit,
+#   lci_centered = pred_mhnc$fit - 1.96 * pred_mhnc$se.fit,
+#   uci_centered = pred_mhnc$fit + 1.96 * pred_mhnc$se.fit
+# )
+# 
+# # Combine predictions and original dataset
+# pred_mhnc_df <- cbind(all_exp_outcome, pred_mhnc_df)|> 
+#   mutate(metabolite_model = "mhnc")
+# 
+# # Uncenter data
+# pred_mhnc_df$pred_agp <- pred_mhnc_df$pred_centered + mean(all_exp_outcome$ssagp)
+# pred_mhnc_df$lci_agp <- pred_mhnc_df$lci_centered + mean(all_exp_outcome$ssagp)
+# pred_mhnc_df$uci_agp <- pred_mhnc_df$uci_centered + mean(all_exp_outcome$ssagp)
+# 
+# # Plot
+# mhnc_s <- ggplot(pred_mhnc_df, aes(x = mhnc, y = pred_agp)) + 
+#   geom_line() + 
+#   geom_ribbon(aes(ymin = lci_agp, ymax = uci_agp), fill = "grey", alpha = 0.5) + 
+#   xlab("mhnc (ug/L)") + 
+#   ylab("AGP (mg/mL)") + 
+#   ggtitle("mhnc")
 ```
 
 This one also has an extremely wide confidence interval at larger values
@@ -509,14 +510,14 @@ mzp_s <- ggplot(pred_mzp_df, aes(x =mzp, y = pred_agp)) +
 
 ```{r}
 #Combine all plots
-combined_plots_splines <- grid.arrange(ecpt_s, mcoh_s, mep_s, mhht_s, mib_s, mhnc_s, mhh_s, mzp_s, ncol = 3, top = "Non-Linear Models of Metabolite Exposure-Response Curves with Penalized Splines")
+combined_plots_splines <- grid.arrange(ecpt_s, mep_s, mhht_s, mib_s, mhh_s, mzp_s, ncol = 3, top = "Non-Linear Models of Metabolite Exposure-Response Curves with Penalized Splines")
 
 ```
 
 
 **Returning to Total Model with Penalized Splines, adding covariates above**
 ```{r Adding Covariates to Penalized Spline Regression using GAM}
-total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+total_covari_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mib) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(total_covari_model)
 
@@ -657,9 +658,10 @@ ggplot(predagp.moh.ns, aes(ssagp)) +
 ```{r}
 # Model metabolites linearly 
 
-lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mep + mhbp + mhh + mhht + mib + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(lin_covari_model)
+
 ```
 
 
@@ -680,8 +682,6 @@ mbp_model <- lm(ssagp ~ mbp + gender_female + age_yrs_screen + income_family_ann
 
 mc1_model <- lm(ssagp ~ mc1 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
-mcoh_model <- lm(ssagp ~ mcoh + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
-
 mep_model <- lm(ssagp ~ mep + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 mhbp_model <- lm(ssagp ~ mhbp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
@@ -690,13 +690,7 @@ mhh_model <- lm(ssagp ~ mhh + gender_female + age_yrs_screen + income_family_ann
 
 mhht_model <- lm(ssagp ~ mhht + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
-mhnc_model <- lm(ssagp ~ mhnc + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
-
-mhp_model <- lm(ssagp ~ mhp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
-
 mib_model <- lm(ssagp ~ mib + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
-
-mnp_model <- lm(ssagp ~ mnp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 moh_model <- lm(ssagp ~ moh + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
@@ -921,32 +915,31 @@ mc1_l <- ggplot(data_mc1, aes(x = mc1, y = ssagp)) +
 ```
 
 ```{r}
-# mcoh
-
-data_mcoh <- data.frame(
-  mcoh = all_exp_outcome$mcoh,
-  gender_female = all_exp_outcome$gender_female,
-  age_yrs_screen = all_exp_outcome$age_yrs_screen,
-  income_family_annual = all_exp_outcome$income_family_annual,
-  race_ethn3 = all_exp_outcome$race_ethn3,
-  ssagp = all_exp_outcome$ssagp
-)
-
-# Predict response variable using the model
-data_mcoh$predicted_ssagp <- predict(mcoh_model, newdata = data_mcoh)
-
-# Plot relationship between cnp and ssagp after accounting for other predictors
-mcoh_l <- ggplot(data_mcoh, aes(x = mcoh, y = ssagp)) +
-  geom_point() + 
-  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MCOH (ug/L)", y = "AGP (mg/mL)", title = "MCOH") + 
-  theme_classic()
+# # mcoh
+# 
+# data_mcoh <- data.frame(
+#   mcoh = all_exp_outcome$mcoh,
+#   gender_female = all_exp_outcome$gender_female,
+#   age_yrs_screen = all_exp_outcome$age_yrs_screen,
+#   income_family_annual = all_exp_outcome$income_family_annual,
+#   race_ethn3 = all_exp_outcome$race_ethn3,
+#   ssagp = all_exp_outcome$ssagp
+# )
+# 
+# # Predict response variable using the model
+# data_mcoh$predicted_ssagp <- predict(mcoh_model, newdata = data_mcoh)
+# 
+# # Plot relationship between cnp and ssagp after accounting for other predictors
+# mcoh_l <- ggplot(data_mcoh, aes(x = mcoh, y = ssagp)) +
+#   geom_point() + 
+#   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+#   labs(x = "MCOH (ug/L)", y = "AGP (mg/mL)", title = "MCOH") + 
+#   theme_classic()
 ```
 
 
 ```{r}
 # mep
-
 data_mep <- data.frame(
   mep = all_exp_outcome$mep,
   gender_female = all_exp_outcome$gender_female,
@@ -1013,6 +1006,7 @@ mhh_l <- ggplot(data_mhh, aes(x = mhh, y = ssagp)) +
   labs(x = "MHH (ug/L)", y = "AGP (mg/mL)", title = "MHH") + 
   theme_classic()
 ```
+
 ```{r}
 # mhh
 
@@ -1060,50 +1054,51 @@ mhht_l <- ggplot(data_mhht, aes(x = mhht, y = ssagp)) +
 ```
 
 ```{r}
-# mhnc
-
-data_mhnc <- data.frame(
-  mhnc = all_exp_outcome$mhnc,
-  gender_female = all_exp_outcome$gender_female,
-  age_yrs_screen = all_exp_outcome$age_yrs_screen,
-  income_family_annual = all_exp_outcome$income_family_annual,
-  race_ethn3 = all_exp_outcome$race_ethn3,
-  ssagp = all_exp_outcome$ssagp
-)
-
-# Predict response variable using the model
-data_mhnc$predicted_ssagp <- predict(mhnc_model, newdata = data_mhnc)
-
-# Plot relationship between cnp and ssagp after accounting for other predictors
-mhnc_l <- ggplot(data_mhnc, aes(x = mhnc, y = ssagp)) +
-  geom_point() + 
-  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MHNC (ug/L)", y = "AGP (mg/mL)", title = "MHNC") + 
-  theme_classic()
+# # mhnc
+# 
+# data_mhnc <- data.frame(
+#   mhnc = all_exp_outcome$mhnc,
+#   gender_female = all_exp_outcome$gender_female,
+#   age_yrs_screen = all_exp_outcome$age_yrs_screen,
+#   income_family_annual = all_exp_outcome$income_family_annual,
+#   race_ethn3 = all_exp_outcome$race_ethn3,
+#   ssagp = all_exp_outcome$ssagp
+# )
+# 
+# # Predict response variable using the model
+# data_mhnc$predicted_ssagp <- predict(mhnc_model, newdata = data_mhnc)
+# 
+# # Plot relationship between cnp and ssagp after accounting for other predictors
+# mhnc_l <- ggplot(data_mhnc, aes(x = mhnc, y = ssagp)) +
+#   geom_point() + 
+#   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+#   labs(x = "MHNC (ug/L)", y = "AGP (mg/mL)", title = "MHNC") + 
+#   theme_classic()
 ```
 
 ```{r}
 # mhp
 
-data_mhp <- data.frame(
-  mhp = all_exp_outcome$mhp,
-  gender_female = all_exp_outcome$gender_female,
-  age_yrs_screen = all_exp_outcome$age_yrs_screen,
-  income_family_annual = all_exp_outcome$income_family_annual,
-  race_ethn3 = all_exp_outcome$race_ethn3,
-  ssagp = all_exp_outcome$ssagp
-)
-
-# Predict response variable using the model
-data_mhp$predicted_ssagp <- predict(mhp_model, newdata = data_mhp)
-
-# Plot relationship between cnp and ssagp after accounting for other predictors
-mhp_l <- ggplot(data_mhp, aes(x = mhp, y = ssagp)) +
-  geom_point() + 
-  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MHP (ug/L)", y = "AGP (mg/mL)", title = "MHP") + 
-  theme_classic()
+# data_mhp <- data.frame(
+#   mhp = all_exp_outcome$mhp,
+#   gender_female = all_exp_outcome$gender_female,
+#   age_yrs_screen = all_exp_outcome$age_yrs_screen,
+#   income_family_annual = all_exp_outcome$income_family_annual,
+#   race_ethn3 = all_exp_outcome$race_ethn3,
+#   ssagp = all_exp_outcome$ssagp
+# )
+# 
+# # Predict response variable using the model
+# data_mhp$predicted_ssagp <- predict(mhp_model, newdata = data_mhp)
+# 
+# # Plot relationship between cnp and ssagp after accounting for other predictors
+# mhp_l <- ggplot(data_mhp, aes(x = mhp, y = ssagp)) +
+#   geom_point() + 
+#   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+#   labs(x = "MHP (ug/L)", y = "AGP (mg/mL)", title = "MHP") + 
+#   theme_classic()
 ```
+
 ```{r}
 # mib
 
@@ -1130,25 +1125,26 @@ mib_l <- ggplot(data_mib, aes(x = mib, y = ssagp)) +
 ```{r}
 # mnp
 
-data_mnp <- data.frame(
-  mnp = all_exp_outcome$mnp,
-  gender_female = all_exp_outcome$gender_female,
-  age_yrs_screen = all_exp_outcome$age_yrs_screen,
-  income_family_annual = all_exp_outcome$income_family_annual,
-  race_ethn3 = all_exp_outcome$race_ethn3,
-  ssagp = all_exp_outcome$ssagp
-)
-
-# Predict response variable using the model
-data_mnp$predicted_ssagp <- predict(mnp_model, newdata = data_mnp)
-
-# Plot relationship between cnp and ssagp after accounting for other predictors
-mnp_l <- ggplot(data_mnp, aes(x = mnp, y = ssagp)) +
-  geom_point() + 
-  geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MNP (ug/L)", y = "AGP (mg/mL)", title = "MNP") + 
-  theme_classic()
+# data_mnp <- data.frame(
+#   mnp = all_exp_outcome$mnp,
+#   gender_female = all_exp_outcome$gender_female,
+#   age_yrs_screen = all_exp_outcome$age_yrs_screen,
+#   income_family_annual = all_exp_outcome$income_family_annual,
+#   race_ethn3 = all_exp_outcome$race_ethn3,
+#   ssagp = all_exp_outcome$ssagp
+# )
+# 
+# # Predict response variable using the model
+# data_mnp$predicted_ssagp <- predict(mnp_model, newdata = data_mnp)
+# 
+# # Plot relationship between cnp and ssagp after accounting for other predictors
+# mnp_l <- ggplot(data_mnp, aes(x = mnp, y = ssagp)) +
+#   geom_point() + 
+#   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
+#   labs(x = "MNP (ug/L)", y = "AGP (mg/mL)", title = "MNP") + 
+#   theme_classic()
 ```
+
 ```{r}
 # moh
 
@@ -1194,6 +1190,7 @@ monp_l <- ggplot(data_monp, aes(x = monp, y = ssagp)) +
   labs(x = "MONP (ug/L)", y = "AGP (mg/mL)", title = "MONP") + 
   theme_classic()
 ```
+
 ```{r}
 # mzp
 
@@ -1219,7 +1216,8 @@ mzp_l <- ggplot(data_mzp, aes(x = mzp, y = ssagp)) +
 
 ```{r message=FALSE, warning=FALSE}
 #Combine all plots
-linear_plots_combined <- grid.arrange(cnp_l, cop_l, ecp_l, ecpt_l, hibp_l, mbp_l, mc1_l, mcoh_l, mep_l, mhbp_l, mhh_l, mhht_l, mhnc_l, mhp_l, mib_l, mnp_l, moh_l, monp_l, mzp_l, ncol = 4, top = "Linear Models of Metabolite Exposure-Response Curves")
+linear_plots_combined <- grid.arrange(cnp_l, cop_l, ecp_l, ecpt_l, hibp_l, mbp_l, mc1_l, mep_l, mhbp_l, mhh_l, mhht_l, mib_l, moh_l, monp_l, mzp_l, ncol = 4, top = "Linear Models of Metabolite Exposure-Response Curves")
+
 ```
 
 
@@ -1296,4 +1294,4 @@ pheatmap(loadings[,1:8], cluster_cols = F, main = "Heatmap of PCs and Metabolite
 
 ```
 
-The main metabolites for the first principal component are mhh, moh, ecp, and mhcp. The main metabolites for the second PC are monp, cop, and mnp. The main metabolites for the third PC are mbp, mhbp, mib, and hibp.
+The main metabolites for the first principal component are mhh, moh, ecp. The main metabolites for the second PC are monp, cop. The main metabolites for the third PC are mbp, mhbp, mib, and hibp.

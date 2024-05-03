@@ -397,7 +397,7 @@ metabolite_summary_long <- metabolite_summary_table %>%
   pivot_wider(names_from = "statistic", values_from = "value")
 
 knitr::kable(metabolite_summary_long)
-
+#mcoh, mhnc, mhp, mnp detected in <70% of samples ... need to be removed 
 ```
 
 
