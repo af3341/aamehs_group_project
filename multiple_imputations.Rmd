@@ -60,7 +60,8 @@ phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
   rename_with(~ gsub("^urx", "", .), starts_with("urx")) %>% 
-  filter(!weights == "0")
+  filter(!weights == "0") %>% 
+  select(-mcoh, -mhnc, -mhp, -mnp)
 ```
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
@@ -504,18 +505,17 @@ mod.MImput.Conf.PooledCoeff[2:6,3]
 
 #first fit linear model 
 
-old_nocovari= lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp, data = exp_outcome)
+old_nocovari= lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mep + mhbp + mhh + mhht + mib + moh + monp + mzp, data = exp_outcome)
 
 summary(old_nocovari)
 
-
-lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mcoh + mep + mhbp + mhh + mhht + mhnc + mhp + mib + mnp + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+lin_covari_model = lm(ssagp ~ cnp + cop + ecp + ecpt + hibp + mbp + mc1 + mep + mhbp + mhh + mhht + mib + moh + monp + mzp + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(lin_covari_model)
 
 #fit complete model with penalized splines 
 
-total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mcoh) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mhnc) + s(mhp) + s(mib) + s(mnp) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
+total_model <- gam(ssagp  ~ s(cnp) + s(cop) + s(ecp) + s(ecpt) + s(hibp) + s(mbp) + s(mc1) + s(mep) + s(mhbp) + s(mhh) + s(mhht) + s(mib) + s(moh) + s(monp) + s(mzp) + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = all_exp_outcome)
 
 summary(total_model)
 
