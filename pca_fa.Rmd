@@ -78,7 +78,8 @@ phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
   rename_with(~ gsub("^urx", "", .), starts_with("urx")) %>% 
-  filter(!weights == "0")
+  filter(!weights == "0") %>% 
+  select(-mcoh, -mhnc, -mhp, -mnp)
 ```
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
@@ -375,7 +376,7 @@ loadings.constituent %>%
   filter(PC1 > 0.3) %>% 
   arrange(desc(PC1)) %>% 
   select("PC1")
-# PC1: moh, mhh, ecp, mhp
+# PC1: moh, mhh, ecp
 
 # PC2 Main Contributers
 loadings.constituent %>% 
@@ -389,14 +390,14 @@ loadings.constituent %>%
   filter(PC2 > 0.2) %>% 
   arrange(desc(PC2)) %>% 
   select("PC2")
-# PC2: monp, cop, mnp, ecpt,..., cnp, mhht
+# PC2: cop, monp, ecpt, mhht, cnp
 
 # PC3 Main Contributers
 loadings.constituent %>% 
   filter(PC3 > 0.4) %>% 
   arrange(desc(PC3)) %>% 
   select("PC3")
-# PC3: mbp, mhbp, mib, hibp
+# PC3: mbp, mhbp
 
 # PC4 Main Contributers
 loadings.constituent %>% 
@@ -404,7 +405,7 @@ loadings.constituent %>%
   arrange(desc(abs(PC4))) %>% 
   select("PC4")
 # Negative!
-# PC4: mhnc, mcoh, .., mhht, ecpt
+# PC4: cop, monp, mhbp, mbp
 
 # PC5 is weird
 
@@ -413,7 +414,7 @@ loadings.constituent %>%
   filter(PC6 > 0.2) %>% 
   arrange(desc(abs(PC6))) %>% 
   select("PC6")
-# PC6: mhht, ecpt, mhbp, mbp
+# PC6: mep
 
 # PC7
 # mainly mep, also mc1
