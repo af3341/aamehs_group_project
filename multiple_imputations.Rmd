@@ -250,6 +250,26 @@ all_var <- all_data_with_outcome |>
          eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
          eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
 
+all_var1 <- all_var %>% 
+  rename("MCNP" = "cnp",
+         "MCOP" = "cop",
+         "MECPP" = "ecp",
+         "MECPTP" = "ecpt", 
+         "MHiBP" = "hibp",
+         "MBP" = "mbp",
+         "MCPP" = "mc1",
+         "MEP" = "mep",
+         "MnBP" = "mhbp",
+         "MEHHP" = "mhh" ,
+         "MEHHTP" = "mhht",
+         "MiBP" = "mib" ,
+         "MEOHP" = "moh" ,
+         "MONP" = "monp",
+         "MBzP" = "mzp"
+         )
+
+all_var <- all_var1
+
 ```
 
 
@@ -291,7 +311,24 @@ options(scipen=999)
 
 #df.Conf.miss <- all_var # this won't run
 df.Conf.miss <- all_exp_outcome %>% 
-  select(-c("seqn", "wtssgp2y", "urxucr", "weights"))
+  select(-c("seqn", "wtssgp2y", "urxucr", "weights")) %>% 
+  select(-c("mcoh", "mhnc", "mhp", "mnp")) %>% 
+  rename("MCNP" = "cnp",
+         "MCOP" = "cop",
+         "MECPP" = "ecp",
+         "MECPTP" = "ecpt", 
+         "MHiBP" = "hibp",
+         "MBP" = "mbp",
+         "MCPP" = "mc1",
+         "MEP" = "mep",
+         "MnBP" = "mhbp",
+         "MEHHP" = "mhh" ,
+         "MEHHTP" = "mhht",
+         "MiBP" = "mib" ,
+         "MEOHP" = "moh" ,
+         "MONP" = "monp",
+         "MBzP" = "mzp"
+         )
 
 # 1b Review data
 
@@ -334,7 +371,7 @@ sum(is.na(df.Conf.miss$mzp))
 # 2b Review pattern of missingness
 
 # We will isolate just the variables with missing data so it is easier to see them 
-df.miss.vars <- df.Conf.miss %>% select(c("monp", "mzp"))
+df.miss.vars <- df.Conf.miss %>% select("MCNP":"MBzP")
 
 # 2b.i Visualize with VIM package 
 
@@ -436,7 +473,7 @@ densityplot(MImput.df.Conf)
 
 # 4A Fit models
 
-mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ mhp + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MCNP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
 
 ##** Class Question **##
 # How many regression models do I run in this step? 
@@ -484,7 +521,7 @@ mod.MImput.Conf.PooledCoeff[2,]
 
 # 6b Create model with original data
 
-mod.NoMiss <- summary(lm(ssagp ~ mhp + gender + age_yrs_screen + race_ethn3 + income_family_annual,  data = df.Conf.miss))
+mod.NoMiss <- summary(lm(ssagp ~ MCNP + gender + age_yrs_screen + race_ethn3 + income_family_annual,  data = df.Conf.miss))
 
 
 # 6c Compare coefficient estimates
@@ -499,6 +536,124 @@ mod.MImput.Conf.PooledCoeff[2:6,3]
 
 
 ```
+
+
+```{r}
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MnBP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MCPP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MONP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MCNP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MHiBP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MiBP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MBzP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MBP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MEP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MEHHTP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MCOP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MECPP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MECPP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MECPTP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MEHHP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+mod.MImput.Conf <- with(MImput.df.Conf, lm(ssagp ~ MEOHP + gender + age_yrs_screen + race_ethn3 + income_family_annual))
+pool(mod.MImput.Conf)
+pool(mod.MImput.Conf)[2,]
+mod.MImput.Conf.PooledCoeff <- summary(pool(mod.MImput.Conf))
+mod.MImput.Conf.PooledCoeff[2,]
+
+
+#### A6: Compare to Model from Original Data ####
+
+mod.NoMiss <- summary(lm(ssagp ~ MCNP + gender + age_yrs_screen + race_ethn3 + income_family_annual,  data = df.Conf.miss))
+# 6c Compare coefficient estimates
+mod.NoMiss$coefficients[2:6,1]
+mod.MImput.Conf.PooledCoeff[2:6,2]
+# 6c Compare standard errors 
+mod.NoMiss$coefficients[2:6,2]
+mod.MImput.Conf.PooledCoeff[2:6,3]
+
+
+
+
+```
+
+
+
 
 # Practice Work - Seeing if MI Dataset can be compared to Nonlinear Work
 ```{r}
