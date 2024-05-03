@@ -398,6 +398,10 @@ metabolite_summary_long <- metabolite_summary_table %>%
 
 knitr::kable(metabolite_summary_long)
 #mcoh, mhnc, mhp, mnp detected in <70% of samples ... need to be removed 
+
+#install.packages("openxlsx")
+library(openxlsx)
+write.xlsx(metabolite_summary_long, "output/metabolite_summary.xlsx", rowNames = FALSE)
 ```
 
 
