@@ -52,7 +52,8 @@ phthte_urine =
   phthte_urine %>% 
   rename(weights = wtsb2yr) %>%
   rename_with(~ gsub("^urx", "", .), starts_with("urx")) %>% 
-  filter(!weights == "0")
+  filter(!weights == "0") %>% 
+  select(-mcoh, -mhnc, -mhp, -mnp)
 ```
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
@@ -311,7 +312,7 @@ TracePlot(fit = adj_fitkm, par = "r", comp = 2)
 # The PIP is the probability that the exposure is an important 
 # part of the mixture
 
-ExtractPIPs(adj_fitkm, z.names = c("cnp", "cop", "ecp", "ecpt", "hibp", "mbp", "mc1", "mcoh", "mep", "mhbp", "mhh", "mhht", "mhnc", "mhp", "mib", "mnp", "moh", "monp", "mzp"))
+ExtractPIPs(adj_fitkm, z.names = c("cnp", "cop", "ecp", "ecpt", "hibp", "mbp", "mc1", "mep", "mhbp", "mhh", "mhht", "mib", "moh", "monp", "mzp"))
 
 #they all basically have the same importance...mep seems to maybe have highest by slightest amount
 
@@ -337,7 +338,7 @@ plotTheme <- theme(axis.title = element_text(size = 19),
 
 adj_pred.resp.univar <- PredictorResponseUnivar(fit = adj_fitkm, 
                                             q.fixed = 0.5, # set other exposures to 50th percentile
-                                            z.names = c("cnp", "cop", "ecp", "ecpt", "hibp", "mbp", "mc1", "mcoh", "mep", "mhbp", "mhh", "mhht", "mhnc", "mhp", "mib", "mnp", "moh", "monp", "mzp")) 
+                                            z.names = c("cnp", "cop", "ecp", "ecpt", "hibp", "mbp", "mc1", "mep", "mhbp", "mhh", "mhht", "mib", "moh", "monp", "mzp")) 
 
 #Create Plot 
 
@@ -379,7 +380,8 @@ mixture_overall <- ggplot(adj_responses.overall, aes(quantile, est, ymin = est -
                               ymax = est + 1.96*sd)) + 
   geom_pointrange() + 
   ylab("Change in Expected AGP") + 
-  plotTheme
+  plotTheme +
+  labs(x = "Quantile", y = "Change in Expected AGP", title = "Overall Mixture Effect")
 
 ggsave("output/mixture_overall.pdf", plot = mixture_overall)
 
