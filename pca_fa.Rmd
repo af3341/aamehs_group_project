@@ -488,7 +488,7 @@ rownames(loadings_df) <- c("MCNP", #"cnp",
                           "MCPP", #"mc1",
                           "MEP", #"mep"
                           "MnBP", #"mhbp",
-                          "MHH", #"mhh",
+                          "MEHHP", #"mhh",
                           "MEHHTP", #"mhht",
                           "MiBP", #"mib", ########
                           "MEOHP", #"moh",
