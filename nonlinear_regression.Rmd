@@ -815,7 +815,7 @@ data_hibp$predicted_ssagp <- predict(hibp_model, newdata = data_hibp)
 hibp_l <- ggplot(data_hibp, aes(x = hibp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "HiBP (g/L)", y = "AGP (ng/mL)") + 
+  labs(x = "MHiBP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
@@ -1230,3 +1230,115 @@ pheatmap(loadings[,1:8], cluster_cols = F, main = "Heatmap of PCs and Metabolite
 ```
 
 The main metabolites for the first principal component are mhh, moh, ecp, and mhcp. The main metabolites for the second PC are monp, cop, and mnp. The main metabolites for the third PC are mbp, mhbp, mib, and hibp.
+
+# Table 1 
+```{r message=FALSE, warning=FALSE}
+
+# create table 1 with age, gender, race/ethnicity, and family income
+
+# recode age into age group 
+all_exp_outcome <- all_exp_outcome |> 
+  mutate(age_group = case_when(age_yrs_screen >= 3 & age_yrs_screen < 7 ~ 1,
+                                          age_yrs_screen >= 7 & age_yrs_screen < 11 ~ 2, 
+                                          age_yrs_screen >= 11 & age_yrs_screen < 14 ~ 3, 
+                                          age_yrs_screen >= 14 ~ 4,
+                                          TRUE ~ NA_real_))
+
+# recode family income into fewer categories 
+all_exp_outcome <- all_exp_outcome |> 
+  mutate(income_family_combined = case_when(
+                                      income_family_annual == 1 ~ "1",
+                                      income_family_annual == 2 ~ "1",
+                                      income_family_annual == 3 ~ "1",
+                                      income_family_annual == 4 ~ "1",
+                                      income_family_annual == 5 ~ "2",
+                                      income_family_annual == 6 ~ "2",
+                                      income_family_annual == 7 ~ "2",
+                                      income_family_annual == 8 ~ "3",
+                                      income_family_annual == 9 ~ "3",
+                                      income_family_annual == 10 ~ "3",
+                                      income_family_annual == 14 ~ "4",
+                                      income_family_annual == 15 ~ "4",
+                                      income_family_annual %in% c(77, 99) ~ "Missing",
+                                      TRUE ~ NA_character_ ))
+
+all_exp_outcome$income_family_combined <- ifelse(is.na(all_exp_outcome$income_family_combined), "Missing", all_exp_outcome$income_family_combined)
+
+
+#Recode variables of interest as factors with labels 
+
+all_exp_outcome <- all_exp_outcome %>%
+  mutate(
+    age_yrs_screen = factor(age_yrs_screen),
+    age_group = factor(age_group),
+    gender = factor(gender),
+    race_ethn3 = factor(race_ethn3),
+    income_family_combined = factor(income_family_combined),
+  )
+
+all_exp_outcome <- all_exp_outcome |> 
+  mutate(
+    age_group = fct_recode(age_group,
+                            "3-6" = "1",
+                            "7-10" = "2",
+                            "11-13" = "3",
+                            "14-16" = "4"), 
+    gender = fct_recode(gender,
+                         "Female" = "1", 
+                         "Male" = "2"), 
+    race_ethn3 = fct_recode(race_ethn3,
+                         "Mexican American" = "1", 
+                         "Other Hispanic" = "2",
+                         "Non-Hispanic White" = "3", 
+                         "Non-Hispanic Black" = "4", 
+                         "Non-Hispanic Asian" = "5", 
+                         "Other" = "6", 
+                         "Missing" = "7"), 
+    income_family_combined = fct_recode(income_family_combined,
+                                  "$0 to $19,999" = "1", 
+                                  "$20,000 to $44,999" = "2", 
+                                  "$45,000 to $74,999" = "3", 
+                                  "$75,000 and Over" = "4", 
+                                  "Missing" = "77", 
+                                  "Missing" = "99"))
+
+# Create table 1
+
+# Select variables of interest
+variables_of_interest <- c("age_yrs_screen", "gender", "race_ethn3", "income_family_combined")
+
+
+# Generate summary statistics for all variables
+table_1 <- all_exp_outcome |> 
+  select(all_of(variables_of_interest)) |> 
+  tbl_summary(
+    by = NULL, 
+    statistic = list(all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_continuous() ~ c(2, 2),
+                  all_categorical() ~ c(0, 1)),
+    type = list(age_yrs_screen ~ "categorical",
+                gender ~ "categorical",
+                income_family_combined ~ "categorical",
+                race_ethn3 ~ "categorical"),
+    label = list(age_yrs_screen ~ "Age",
+                 gender ~ "Gender",
+                 income_family_combined ~ "Family Income",
+                 race_ethn3 ~ "Race and Ethnicity")
+    ) |> 
+  modify_header(label = "**Variable**") |> 
+  modify_caption("Table 1: Demographic Characteristics of Children Ages 3-16 in NHANES 2017-2018") |>
+  bold_labels() |> 
+  modify_table_body(
+    ~.x %>%
+      mutate(
+        across(where(is.character), ~ifelse(.x == "9.00 (3.94)", "9 (3.94)", .x))
+      )
+  )
+
+# Print the summary table
+table_1
+
+write.xlsx(as.data.frame(table_1), file = "table_1.xlsx")
+
+
+```
