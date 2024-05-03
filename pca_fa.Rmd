@@ -209,6 +209,7 @@ ggcorr(phth_data, labs.title = "Correlations")
 
 pca <- prcomp(phth_data, scale. = TRUE)
 
+all(prcomp(phth_data, scale. = TRUE)$rotation == prcomp(scale(phth_data), scale. = FALSE)$rotation)
 
 ####
 
@@ -383,7 +384,8 @@ loadings.constituent %>%
   filter(PC2 > 0.2) %>% 
   arrange(desc(PC2)) %>% 
   select("PC2")
-# PC2: monp, cop, mnp, ecpt,..., cnp, mhht
+# PC2: monp, cop, ecpt,..., cnp, mhht
+ mnp
 
 # PC2 Main Contributers
 loadings.constituent %>% 
@@ -488,6 +490,54 @@ pheatmap(loadings_df, cluster_rows = TRUE, cluster_cols = FALSE,
 
 
 
+
+```
+
+```{r PC_in_model}
+
+# updated data format to match nonlinear regression rmd
+
+#Joining current demographic values we have with the exp_outcome table
+
+demo_new = demo |> 
+  select(seqn, gender, age_yrs_screen, race_ethn3, income_family_annual)
+
+all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |> 
+  mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
+  mutate(eth_mex = case_when(race_ethn3 == 1 ~ 1, TRUE ~ 0),
+         eth_hisp_oth = case_when(race_ethn3 == 2 ~ 1, TRUE ~ 0),
+         eth_white = case_when(race_ethn3 == 3 ~ 1, TRUE ~ 0),
+         eth_black = case_when(race_ethn3 == 4 ~ 1, TRUE ~ 0),
+         eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
+         eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
+
+all_exp_outcome$gender_female <- as.factor(all_exp_outcome$gender_female)
+all_exp_outcome$race_ethn3 <- as.factor(all_exp_outcome$race_ethn3)
+
+
+# add scores for each PC
+pca_scores <- as.data.frame(pca$x[,1:7]) %>% 
+  rownames_to_column(var = "seqn") %>% 
+  mutate(seqn = as.numeric(seqn))
+data_exp_outcome_pc <- inner_join(all_exp_outcome, pca_scores, by = "seqn")
+
+
+# individual linear models
+pc1_model <- lm(ssagp ~ PC1 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+pc2_model <- lm(ssagp ~ PC2 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+pc3_model <- lm(ssagp ~ PC3 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+pc4_model <- lm(ssagp ~ PC4 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+pc5_model <- lm(ssagp ~ PC5 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+
+summary(pc1_model)
+summary(pc2_model)
+summary(pc3_model)
+summary(pc4_model)
+summary(pc5_model)
+
+# first five PCs
+pc1to5_model <- lm(ssagp ~ PC1 + PC2 + PC3 + PC4 + PC5 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+summary(pc1to5_model)
 
 ```
 
