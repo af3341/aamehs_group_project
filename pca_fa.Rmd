@@ -209,6 +209,7 @@ ggcorr(phth_data, labs.title = "Correlations")
 
 pca <- prcomp(phth_data, scale. = TRUE)
 
+all(prcomp(phth_data, scale. = TRUE)$rotation == prcomp(scale(phth_data), scale. = FALSE)$rotation)
 
 ####
 
@@ -383,7 +384,8 @@ loadings.constituent %>%
   filter(PC2 > 0.2) %>% 
   arrange(desc(PC2)) %>% 
   select("PC2")
-# PC2: monp, cop, mnp, ecpt,..., cnp, mhht
+# PC2: monp, cop, ecpt,..., cnp, mhht
+ mnp
 
 # PC2 Main Contributers
 loadings.constituent %>% 
@@ -439,7 +441,7 @@ library(broom)
 dim(pca_scaled$scores)
 dim(combined_summary %>% na.omit())
 
-scores_df <- cbind(combined_summary %>% na.omit(), pca_scaled$scores)
+#scores_df <- cbind(combined_summary %>% na.omit(), pca_scaled$scores)
 
 scores_df <- pca$x
 
@@ -466,28 +468,123 @@ total_variance <- sum(variances)
 proportion_variance_explained <- variances / total_variance
 
 # make df for pca heatmap
-loadings_df <- pca_scaled$loadings[,1:8]
+loadings_df <- pca_scaled$loadings[,1:5]
 
-loadings_df <- pca$rotation[,1:8]
+loadings_df <- pca$rotation[,1:5]
 colnames(loadings_df) <- c(paste0("PC1: ", round(proportion_variance_explained[1] * 100, 2), "%"),
                            paste0("PC2: ", round(proportion_variance_explained[2] * 100, 2), "%"),
                            paste0("PC3: ", round(proportion_variance_explained[3] * 100, 2), "%"),
                            paste0("PC4: ", round(proportion_variance_explained[4] * 100, 2), "%"),
-                           paste0("PC5: ", round(proportion_variance_explained[5] * 100, 2), "%"),
-                           paste0("PC6: ", round(proportion_variance_explained[6] * 100, 2), "%"),
-                           paste0("PC7: ", round(proportion_variance_explained[7] * 100, 2), "%"),
-                           paste0("PC8: ", round(proportion_variance_explained[8] * 100, 2), "%")
-                          )
+                           paste0("PC5: ", round(proportion_variance_explained[5] * 100, 2), "%"))
+
+rownames(loadings_df) 
+# "cnp"  "cop"  "ecp"  "ecpt" "hibp" "mbp"  "mc1"  "mep"  "mhbp" "mhh"  "mhht" "mib" "moh"  "monp" "mzp" 
+rownames(loadings_df) <- c("MCNP", #"cnp",
+                          "MCOP", #"cop",
+                          "MECPP", #"ecp",
+                          "MECPTP", #"ecpt",
+                          "MHiBP", #"hibp",
+                          "MBP", #"mbp", ########
+                          "MCPP", #"mc1",
+                          "MEP", #"mep"
+                          "MnBP", #"mhbp",
+                          "MEHHP", #"mhh",
+                          "MEHHTP", #"mhht",
+                          "MiBP", #"mib", ########
+                          "MEOHP", #"moh",
+                          "MONP", #monp",
+                          "MBzP") #"mzp" )
+
+# loadings_df <- loadings_df[c("MECPP",
+#                              "MHH",
+#                              "MEOHP",
+#                              "MECPTP",
+#                              "MEHHTP",
+#                              "MCOP",
+#                              "MONP",
+#                              "MCNP",
+#                              "MiBP",
+#                              "MnBP",
+#                              "MBP",
+#                              "MHiBP",
+#                              "MBzP",
+#                              "MCPP",
+#                              "MEP")]
+  
+
+
+#,
+#                           paste0("PC6: ", round(proportion_variance_explained[6] * #100, 2), "%"))
+
+#,
+#                           paste0("PC7: ", round(proportion_variance_explained[7] * #100, 2), "%"),
+#                           paste0("PC8: ", round(proportion_variance_explained[8] * #100, 2), "%")
+#                          )
 
 
 library(pheatmap)
 pheatmap(loadings_df, cluster_rows = TRUE, cluster_cols = FALSE,
+         clustering_method = "single", #single
          display_numbers = TRUE,
-         main = "PC Loadings")
+         angle_col = c("45"),
+     #    treeheight_row = 15,
+         main = "Principal Component Metabolite Loadings")
 
 
 
 
+
+```
+
+```{r PC_in_model}
+
+# updated data format to match nonlinear regression rmd
+
+#Joining current demographic values we have with the exp_outcome table
+
+demo_new = demo |> 
+  select(seqn, gender, age_yrs_screen, race_ethn3, income_family_annual)
+
+all_exp_outcome = inner_join(exp_outcome, demo_new, by = "seqn") |> 
+  mutate(gender_female = if_else(gender == 1, 1, 0)) |>  #making a binary assignment of gender for multiple regression male = 0, female = 1
+  mutate(eth_mex = case_when(race_ethn3 == 1 ~ 1, TRUE ~ 0),
+         eth_hisp_oth = case_when(race_ethn3 == 2 ~ 1, TRUE ~ 0),
+         eth_white = case_when(race_ethn3 == 3 ~ 1, TRUE ~ 0),
+         eth_black = case_when(race_ethn3 == 4 ~ 1, TRUE ~ 0),
+         eth_asian = case_when(race_ethn3 == 6 ~ 1, TRUE ~ 0),
+         eth_nonhispanic_multirace = case_when(race_ethn3 == 7 ~ 1, TRUE ~ 0)) 
+
+all_exp_outcome$gender_female <- as.factor(all_exp_outcome$gender_female)
+all_exp_outcome$race_ethn3 <- as.factor(all_exp_outcome$race_ethn3)
+
+
+# add scores for each PC
+pca_scores <- as.data.frame(pca$x[,1:7]) %>% 
+  rownames_to_column(var = "seqn") %>% 
+  mutate(seqn = as.numeric(seqn))
+data_exp_outcome_pc <- inner_join(all_exp_outcome, pca_scores, by = "seqn")
+
+
+# individual linear models
+pc1_model <- lm(ssagp ~ PC1 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+pc2_model <- lm(ssagp ~ PC2 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+pc3_model <- lm(ssagp ~ PC3 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+pc4_model <- lm(ssagp ~ PC4 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+pc5_model <- lm(ssagp ~ PC5 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+
+summary(pc1_model)
+summary(pc2_model)
+summary(pc3_model)
+summary(pc4_model)
+summary(pc5_model)
+
+# first five PCs
+pc1to5_model <- lm(ssagp ~ PC1 + PC2 + PC3 + PC4 + PC5 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+summary(pc1to5_model)
+
+# first two PCs
+pc1to2_model <- lm(ssagp ~ PC1 + PC2 + gender_female + age_yrs_screen + income_family_annual + race_ethn3, data = data_exp_outcome_pc)
+summary(pc1to2_model)
 
 ```
 

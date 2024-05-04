@@ -344,7 +344,7 @@ adj_pred.resp.univar <- PredictorResponseUnivar(fit = adj_fitkm,
 
 mixture_interaction <- ggplot(adj_pred.resp.univar, aes(z, est, ymin = est - 1.96*se, ymax = est + 1.96*se)) + 
   geom_smooth(stat = "identity") + 
-  facet_wrap(~ variable, scales = "free_x") +
+  facet_wrap(~ variable, scales = "free_x", labeller = labeller(variable = c("cnp" = "MCNP", "cop" = "MCOP", "ecp" = "MECPP", "ecpt" = "MECPTP", "hibp" = "MHiBP", "mbp" = "MBP", "mc1" = "MCPP", "mep" = "MEP", "mhbp" = "MnBP", "mhh" = "MEHHP", "mhht" = "MEHHTP", "mib" = "MiBP", "moh" = "MEOHP", "monp" = "MONP", "mzp" = "MBzP" ))) +
   xlab("Phthalate Concentrations") + 
   ylab("Change in Expected AGP") + 
   plotTheme + theme(
