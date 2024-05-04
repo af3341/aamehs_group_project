@@ -836,7 +836,7 @@ data_mbp$predicted_ssagp <- predict(mbp_model, newdata = data_mbp)
 mbp_l <- ggplot(data_mbp, aes(x = mbp, y = ssagp)) +
   geom_point() + 
   geom_smooth(aes(y = predicted_ssagp), method = "lm", se = FALSE, color = "blue") +
-  labs(x = "MiBP (g/L)", y = "AGP (ng/mL)") + 
+  labs(x = "MBP (g/L)", y = "AGP (ng/mL)") + 
   theme_classic()
 ```
 
